@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import urllib.parse
 import logging
+import random
 from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -223,8 +224,13 @@ async def get_questions(query_id: str = None, session: str = None):
         raise HTTPException(status_code=400, detail="query_id or session required")
 
     settings = database.get_chat_settings(chat_id)
-    qs = [{"id": i, "q": q["q"]} for i, q in enumerate(settings["questions"])]
-    return {"questions": qs}
+    all_qs = settings.get("questions", [])
+    if not all_qs:
+        raise HTTPException(status_code=404, detail="No questions configured")
+    # Повертаємо одне випадкове питання
+    chosen = random.choice(all_qs)
+    idx = all_qs.index(chosen)
+    return {"questions": [{"id": idx, "q": chosen["q"]}]}
 
 @app.post("/api/verify")
 async def verify_user(request: Request):

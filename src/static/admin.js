@@ -56,7 +56,8 @@ document.addEventListener("DOMContentLoaded", () => {
         fetch(`/api/settings?chat_id=${cid}`)
             .then(res => res.json())
             .then(data => {
-                document.getElementById("action").value = data.action;
+                document.getElementById("action").value = data.action || "decline";
+                document.getElementById("guard-mode").checked = data.guard_mode !== false;
                 document.getElementById("check-ip").checked = data.check_ip;
                 document.getElementById("check-device").checked = data.check_device;
                 document.getElementById("check-avatar").checked = data.check_avatar;
@@ -99,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const settings = {
             action: document.getElementById("action").value,
+            guard_mode: document.getElementById("guard-mode").checked,
             check_ip: document.getElementById("check-ip").checked,
             check_device: document.getElementById("check-device").checked,
             check_avatar: document.getElementById("check-avatar").checked,
