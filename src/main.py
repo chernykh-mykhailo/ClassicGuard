@@ -27,6 +27,9 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     database.init_db()
+    if config.BOT_TOKEN != "YOUR_BOT_TOKEN_HERE" and "yourdomain.com" not in config.WEBAPP_URL:
+        webhook_url = f"{config.WEBAPP_URL}/webhook"
+        bot_api.set_webhook(webhook_url)
 
 active_queries = {}
 ip_history = {}
