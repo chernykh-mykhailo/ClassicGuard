@@ -76,9 +76,32 @@ async def telegram_webhook(request: Request):
                 "👋 <b>Вітаю! Я бот ClassicGuard.</b>\n\n"
                 "Я допомагаю захищати чати від спам-ботів та твінк-акаунтів за допомогою перевірок та капчі.\n\n"
                 "ℹ️ <b>Доступні команди:</b>\n"
-                "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID."
+                "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID.\n"
+                "• <code>/settings</code> або <code>/config</code> — відкрити веб-панель налаштувань (лише для адмінів у чаті групи)."
             )
             bot_api.send_message(chat_id, response_text)
+        elif text.startswith("/settings") or text.startswith("/config"):
+            user_id = user.get("id")
+            if chat.get("type") in ["group", "supergroup"]:
+                member_resp = bot_api.get_chat_member(chat_id, user_id)
+                status = member_resp.get("result", {}).get("status", "")
+                if status in ["creator", "administrator"]:
+                    web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/admin.html?chat_id={chat_id}"
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": "⚙️ Відкрити налаштування",
+                                    "web_app": {"url": web_app_url}
+                                }
+                            ]
+                        ]
+                    }
+                    bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб відкрити панель налаштувань для цієї групи:", reply_markup=reply_markup)
+                else:
+                    bot_api.send_message(chat_id, "⚠️ Ця команда доступна лише адміністраторам групи.")
+            else:
+                bot_api.send_message(chat_id, "⚠️ Налаштування можна відкрити лише в чатах груп.")
 
     elif "chat_join_request" in data:
         req = data["chat_join_request"]

@@ -29,9 +29,15 @@ def answer_chat_join_request_query(chat_join_request_query_id: str, result: str)
 def get_user_profile_photos(user_id: int, limit: int = 1):
     return make_request("getUserProfilePhotos", {"user_id": user_id, "limit": limit})
 
-def send_message(chat_id: str | int, text: str, parse_mode: str = "HTML"):
-    return make_request("sendMessage", {
+def send_message(chat_id: str | int, text: str, parse_mode: str = "HTML", reply_markup: dict = None):
+    params = {
         "chat_id": chat_id,
         "text": text,
         "parse_mode": parse_mode
-    })
+    }
+    if reply_markup:
+        params["reply_markup"] = reply_markup
+    return make_request("sendMessage", params)
+
+def get_chat_member(chat_id: str | int, user_id: int):
+    return make_request("getChatMember", {"chat_id": chat_id, "user_id": user_id})
