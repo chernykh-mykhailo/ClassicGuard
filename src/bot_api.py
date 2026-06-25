@@ -29,7 +29,7 @@ def answer_chat_join_request_query(chat_join_request_query_id: str, result: str)
 def get_user_profile_photos(user_id: int, limit: int = 1):
     return make_request("getUserProfilePhotos", {"user_id": user_id, "limit": limit})
 
-def send_message(chat_id: str | int, text: str, parse_mode: str = "HTML", reply_markup: dict = None):
+def send_message(chat_id: str | int, text: str, parse_mode: str = "HTML", reply_markup: dict = None, message_thread_id: int = None):
     params = {
         "chat_id": chat_id,
         "text": text,
@@ -37,7 +37,16 @@ def send_message(chat_id: str | int, text: str, parse_mode: str = "HTML", reply_
     }
     if reply_markup:
         params["reply_markup"] = reply_markup
+    if message_thread_id:
+        params["message_thread_id"] = message_thread_id
     return make_request("sendMessage", params)
 
 def get_chat_member(chat_id: str | int, user_id: int):
     return make_request("getChatMember", {"chat_id": chat_id, "user_id": user_id})
+
+def set_my_commands():
+    commands = [
+        {"command": "id", "description": "Отримати ID чату та користувача"},
+        {"command": "settings", "description": "Налаштування ClassicGuard"}
+    ]
+    return make_request("setMyCommands", {"commands": commands})

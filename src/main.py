@@ -27,9 +27,11 @@ app.add_middleware(
 @app.on_event("startup")
 def startup_event():
     database.init_db()
-    if config.BOT_TOKEN != "YOUR_BOT_TOKEN_HERE" and "yourdomain.com" not in config.WEBAPP_URL:
-        webhook_url = f"{config.WEBAPP_URL.rstrip('/')}/webhook"
-        bot_api.set_webhook(webhook_url)
+    if config.BOT_TOKEN != "YOUR_BOT_TOKEN_HERE":
+        bot_api.set_my_commands()
+        if "yourdomain.com" not in config.WEBAPP_URL:
+            webhook_url = f"{config.WEBAPP_URL.rstrip('/')}/webhook"
+            bot_api.set_webhook(webhook_url)
 
 active_queries = {}
 ip_history = {}
@@ -53,11 +55,15 @@ async def telegram_webhook(request: Request):
         chat = msg.get("chat", {})
         chat_id = chat.get("id")
         user = msg.get("from", {})
+        message_thread_id = msg.get("message_thread_id")
         
         if chat.get("type") in ["group", "supergroup"]:
             database.get_chat_settings(chat_id)
         
-        if text.startswith("/get_id") or text.startswith("/id"):
+        # Support command matches even if they include bot username, e.g. /id@botname
+        command = text.split("@")[0].split()[0] if text.startswith("/") else text
+        
+        if command in ["/get_id", "/id"]:
             reply_to = msg.get("reply_to_message")
             if reply_to:
                 replied_user = reply_to.get("from", {})
@@ -73,8 +79,8 @@ async def telegram_webhook(request: Request):
                     f"🏢 <b>ID цього чату:</b> <code>{chat_id}</code>\n"
                     f"👤 <b>Ваш ID:</b> <code>{user.get('id')}</code>"
                 )
-            bot_api.send_message(chat_id, response_text)
-        elif text.startswith("/start"):
+            bot_api.send_message(chat_id, response_text, message_thread_id=message_thread_id)
+        elif command == "/start":
             response_text = (
                 "👋 <b>Вітаю! Я бот ClassicGuard.</b>\n\n"
                 "Я допомагаю захищати чати від спам-ботів та твінк-акаунтів за допомогою перевірок та капчі.\n\n"
@@ -82,8 +88,8 @@ async def telegram_webhook(request: Request):
                 "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID.\n"
                 "• <code>/settings</code> або <code>/config</code> — відкрити веб-панель налаштувань (лише для адмінів у чаті групи)."
             )
-            bot_api.send_message(chat_id, response_text)
-        elif text.startswith("/settings") or text.startswith("/config"):
+            bot_api.send_message(chat_id, response_text, message_thread_id=message_thread_id)
+        elif command in ["/settings", "/config"]:
             user_id = user.get("id")
             if chat.get("type") in ["group", "supergroup"]:
                 member_resp = bot_api.get_chat_member(chat_id, user_id)
@@ -100,9 +106,9 @@ async def telegram_webhook(request: Request):
                             ]
                         ]
                     }
-                    bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб відкрити панель налаштувань для цієї групи:", reply_markup=reply_markup)
+                    bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб відкрити панель налаштувань для цієї групи:", reply_markup=reply_markup, message_thread_id=message_thread_id)
                 else:
-                    bot_api.send_message(chat_id, "⚠️ Ця команда доступна лише адміністраторам групи.")
+                    bot_api.send_message(chat_id, "⚠️ Ця команда доступна лише адміністраторам групи.", message_thread_id=message_thread_id)
             else:
                 # Private chat setting mode
                 web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/admin.html"
