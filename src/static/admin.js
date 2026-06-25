@@ -64,7 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("avatar-min-days").value = data.avatar_min_days;
                 document.getElementById("log-channel").value = data.log_channel || "";
                 document.getElementById("contact-link").value = data.contact_link || "";
-                document.getElementById("decline-message").value = data.decline_message || "";
+                document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
+                document.getElementById("decline-msg-twink").value = data.decline_msg_twink || "";
 
                 questionsList.innerHTML = "";
                 if (data.questions) {
@@ -109,7 +110,8 @@ document.addEventListener("DOMContentLoaded", () => {
             avatar_min_days: parseInt(document.getElementById("avatar-min-days").value, 10),
             log_channel: document.getElementById("log-channel").value.trim(),
             contact_link: document.getElementById("contact-link").value.trim(),
-            decline_message: document.getElementById("decline-message").value.trim(),
+            decline_msg_captcha: document.getElementById("decline-msg-captcha").value.trim(),
+            decline_msg_twink: document.getElementById("decline-msg-twink").value.trim(),
             questions: questions
         };
 

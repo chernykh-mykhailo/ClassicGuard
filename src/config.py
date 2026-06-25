@@ -16,8 +16,9 @@ DEFAULT_SETTINGS = {
     "check_avatar": True,
     "avatar_min_days": 3,
     "log_channel": "",    # ID of the channel for logs
-    "contact_link": "",  # Username or link to contact admin (e.g. @admin or https://t.me/admin)
-    "decline_message": "",  # Custom message to send on decline (empty = default)
+    "contact_link": "",
+    "decline_msg_captcha": "",  # Message when captcha failed
+    "decline_msg_twink": "",   # Message when suspected twink (IP/avatar)
     "questions": [
         {"q": "Чий Крим?", "a": ["український", "україна", "україни"]},
         {"q": "Батько наш - ...?", "a": ["бандера"]},
