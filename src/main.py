@@ -23,12 +23,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+bot_username = "ClassicGuard_Bot"
+
 # Initialize database on startup
 @app.on_event("startup")
 def startup_event():
+    global bot_username
     database.init_db()
     if config.BOT_TOKEN != "YOUR_BOT_TOKEN_HERE":
         bot_api.set_my_commands()
+        me_resp = bot_api.make_request("getMe")
+        if me_resp.get("ok"):
+            bot_username = me_resp.get("result", {}).get("username", "ClassicGuard_Bot")
         if "yourdomain.com" not in config.WEBAPP_URL:
             webhook_url = f"{config.WEBAPP_URL.rstrip('/')}/webhook"
             bot_api.set_webhook(webhook_url)
@@ -80,33 +86,56 @@ async def telegram_webhook(request: Request):
                     f"👤 <b>Ваш ID:</b> <code>{user.get('id')}</code>"
                 )
             bot_api.send_message(chat_id, response_text, message_thread_id=message_thread_id)
-        elif command == "/start":
-            response_text = (
-                "👋 <b>Вітаю! Я бот ClassicGuard.</b>\n\n"
-                "Я допомагаю захищати чати від спам-ботів та твінк-акаунтів за допомогою перевірок та капчі.\n\n"
-                "ℹ️ <b>Доступні команди:</b>\n"
-                "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID.\n"
-                "• <code>/settings</code> або <code>/config</code> — відкрити веб-панель налаштувань (лише для адмінів у чаті групи)."
-            )
-            bot_api.send_message(chat_id, response_text, message_thread_id=message_thread_id)
+        elif command.startswith("/start"):
+            args = text.split()
+            if len(args) > 1 and args[1].startswith("settings_"):
+                target_chat_id = int(args[1].split("_")[1])
+                user_id = user.get("id")
+                member_resp = bot_api.get_chat_member(target_chat_id, user_id)
+                status = member_resp.get("result", {}).get("status", "")
+                if status in ["creator", "administrator"]:
+                    web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/admin.html?chat_id={target_chat_id}"
+                    reply_markup = {
+                        "inline_keyboard": [
+                            [
+                                {
+                                    "text": "⚙️ Відкрити налаштування чату",
+                                    "web_app": {"url": web_app_url}
+                                }
+                            ]
+                        ]
+                    }
+                    bot_api.send_message(chat_id, f"Ось посилання для налаштування чату <code>{target_chat_id}</code>:", reply_markup=reply_markup)
+                else:
+                    bot_api.send_message(chat_id, "⚠️ Ви повинні бути адміністратором цієї групи, щоб змінювати її налаштування.")
+            else:
+                response_text = (
+                    "👋 <b>Вітаю! Я бот ClassicGuard.</b>\n\n"
+                    "Я допомагаю захищати чати від спам-ботів та твінк-акаунтів за допомогою перевірок та капчі.\n\n"
+                    "ℹ️ <b>Доступні команди:</b>\n"
+                    "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID.\n"
+                    "• <code>/settings</code> або <code>/config</code> — відкрити веб-панель налаштувань (лише для адмінів у чаті групи)."
+                )
+                bot_api.send_message(chat_id, response_text, message_thread_id=message_thread_id)
         elif command in ["/settings", "/config"]:
             user_id = user.get("id")
             if chat.get("type") in ["group", "supergroup"]:
                 member_resp = bot_api.get_chat_member(chat_id, user_id)
                 status = member_resp.get("result", {}).get("status", "")
                 if status in ["creator", "administrator"]:
-                    web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/admin.html?chat_id={chat_id}"
+                    # In group chats, send a link redirecting to the bot's PM
+                    deep_link = f"https://t.me/{bot_username}?start=settings_{chat_id}"
                     reply_markup = {
                         "inline_keyboard": [
                             [
                                 {
-                                    "text": "⚙️ Відкрити налаштування",
-                                    "web_app": {"url": web_app_url}
+                                    "text": "⚙️ Перейти в ПП для налаштування",
+                                    "url": deep_link
                                 }
                             ]
                         ]
                     }
-                    bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб відкрити панель налаштувань для цієї групи:", reply_markup=reply_markup, message_thread_id=message_thread_id)
+                    bot_api.send_message(chat_id, "Для налаштування бота в цій групі, перейдіть в особисті повідомлення за кнопкою нижче:", reply_markup=reply_markup, message_thread_id=message_thread_id)
                 else:
                     bot_api.send_message(chat_id, "⚠️ Ця команда доступна лише адміністраторам групи.", message_thread_id=message_thread_id)
             else:
