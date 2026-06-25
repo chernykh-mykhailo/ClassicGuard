@@ -37,6 +37,11 @@ def init_db():
         """)
         conn.commit()
 
+def get_all_chats() -> list:
+    with get_db() as conn:
+        rows = conn.execute("SELECT chat_id FROM settings").fetchall()
+        return [row["chat_id"] for row in rows]
+
 def get_chat_settings(chat_id: int) -> dict:
     from src.config import DEFAULT_SETTINGS
     with get_db() as conn:

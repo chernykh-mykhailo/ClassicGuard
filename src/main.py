@@ -101,7 +101,19 @@ async def telegram_webhook(request: Request):
                 else:
                     bot_api.send_message(chat_id, "⚠️ Ця команда доступна лише адміністраторам групи.")
             else:
-                bot_api.send_message(chat_id, "⚠️ Налаштування можна відкрити лише в чатах груп.")
+                # Private chat setting mode
+                web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/admin.html"
+                reply_markup = {
+                    "inline_keyboard": [
+                        [
+                            {
+                                "text": "⚙️ Відкрити панель керування",
+                                "web_app": {"url": web_app_url}
+                            }
+                        ]
+                    ]
+                }
+                bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб налаштувати ботів для ваших чатів:", reply_markup=reply_markup)
 
     elif "chat_join_request" in data:
         req = data["chat_join_request"]
@@ -226,6 +238,20 @@ async def update_settings(chat_id: int, settings: SettingsModel):
     if log_chan:
         bot_api.send_message(log_chan, f"⚙️ <b>Налаштування ClassicGuard оновлено</b> для чату <code>{chat_id}</code>.")
     return {"success": True}
+
+@app.get("/api/admin/chats")
+async def get_admin_chats(user_id: int):
+    chats = database.get_all_chats()
+    admin_chats = []
+    for c_id in chats:
+        member_resp = bot_api.get_chat_member(c_id, user_id)
+        if member_resp.get("ok"):
+            status = member_resp.get("result", {}).get("status", "")
+            if status in ["creator", "administrator"]:
+                chat_resp = bot_api.make_request("getChat", {"chat_id": c_id})
+                title = chat_resp.get("result", {}).get("title", f"Група {c_id}")
+                admin_chats.append({"id": c_id, "title": title})
+    return {"chats": admin_chats}
 
 # Serve static directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")

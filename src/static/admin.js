@@ -3,27 +3,72 @@ document.addEventListener("DOMContentLoaded", () => {
     tg.expand();
 
     const urlParams = new URLSearchParams(window.location.search);
-    const chatId = urlParams.get("chat_id") || "0"; // Default or fallback chat_id
+    const chatId = urlParams.get("chat_id") || "0";
     const questionsList = document.getElementById("questions-list");
     const addQuestionBtn = document.getElementById("add-question");
     const form = document.getElementById("settings-form");
+    const selectorContainer = document.getElementById("chat-selector-container");
+    const chatSelect = document.getElementById("chat-select");
+    const selectChatBtn = document.getElementById("select-chat-btn");
 
-    // Fetch existing settings for this specific chat
-    fetch(`/api/settings?chat_id=${chatId}`)
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("action").value = data.action;
-            document.getElementById("check-ip").checked = data.check_ip;
-            document.getElementById("check-device").checked = data.check_device;
-            document.getElementById("check-avatar").checked = data.check_avatar;
-            document.getElementById("avatar-min-days").value = data.avatar_min_days;
-            document.getElementById("log-channel").value = data.log_channel || "";
+    let activeChatId = chatId;
 
-            questionsList.innerHTML = ""; // Clear loader/default
-            if (data.questions) {
-                data.questions.forEach(q => renderQuestion(q.q, q.a.join(", ")));
+    if (activeChatId === "0") {
+        form.style.display = "none";
+        selectorContainer.style.display = "block";
+
+        const userId = tg.initDataUnsafe?.user?.id || 0;
+        fetch(`/api/admin/chats?user_id=${userId}`)
+            .then(res => res.json())
+            .then(data => {
+                chatSelect.innerHTML = "";
+                if (data.chats && data.chats.length > 0) {
+                    data.chats.forEach(c => {
+                        const opt = document.createElement("option");
+                        opt.value = c.id;
+                        opt.textContent = c.title;
+                        chatSelect.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement("option");
+                    opt.value = "";
+                    opt.textContent = "Не знайдено підключених груп, де ви є адміном";
+                    chatSelect.appendChild(opt);
+                }
+            });
+
+        selectChatBtn.addEventListener("click", () => {
+            const val = chatSelect.value;
+            if (val) {
+                activeChatId = val;
+                selectorContainer.style.display = "none";
+                form.style.display = "block";
+                loadSettings(activeChatId);
+            } else {
+                alert("Будь ласка, оберіть дійсний чат.");
             }
         });
+    } else {
+        loadSettings(activeChatId);
+    }
+
+    function loadSettings(cid) {
+        fetch(`/api/settings?chat_id=${cid}`)
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("action").value = data.action;
+                document.getElementById("check-ip").checked = data.check_ip;
+                document.getElementById("check-device").checked = data.check_device;
+                document.getElementById("check-avatar").checked = data.check_avatar;
+                document.getElementById("avatar-min-days").value = data.avatar_min_days;
+                document.getElementById("log-channel").value = data.log_channel || "";
+
+                questionsList.innerHTML = "";
+                if (data.questions) {
+                    data.questions.forEach(q => renderQuestion(q.q, q.a.join(", ")));
+                }
+            });
+    }
 
     function renderQuestion(questionText = "", answersText = "") {
         const item = document.createElement("div");
@@ -62,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
             questions: questions
         };
 
-        fetch(`/api/settings?chat_id=${chatId}`, {
+        fetch(`/api/settings?chat_id=${activeChatId}`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
