@@ -1,6 +1,7 @@
 import hashlib
 import hmac
 import urllib.parse
+import logging
 from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +9,12 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 import time
 import os
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s"
+)
+logger = logging.getLogger(__name__)
 
 from src import config
 from src import bot_api
@@ -39,11 +46,13 @@ def startup_event():
             webhook_url = f"{config.WEBAPP_URL.rstrip('/')}/webhook"
             bot_api.set_webhook(webhook_url)
 
-active_queries = {}
+active_queries = {}     # query_id -> {chat_id, user_id, ...}  (new API with query_id)
+fallback_queries = {}  # user_id -> {chat_id, user_id, ...}  (old flow without query_id)
 ip_history = {}
 
 class SettingsModel(BaseModel):
     action: str
+    guard_mode: bool = True
     check_device: bool
     check_ip: bool
     check_avatar: bool
@@ -158,39 +167,77 @@ async def telegram_webhook(request: Request):
         query_id = req.get("query_id")
         user = req.get("from", {})
         chat = req.get("chat", {})
-        
+        chat_id = chat.get("id")
+        user_id = user.get("id")
+        username = user.get("username", "") or user.get("first_name", "")
+
+        logger.info(f"chat_join_request: user_id={user_id} username={username} chat_id={chat_id} query_id={query_id}")
+
+        database.log_verification_start(chat_id, user_id, username)
+        chat_settings = database.get_chat_settings(chat_id)
+        guard_mode = chat_settings.get("guard_mode", True)
+
+        if not guard_mode:
+            logger.info(f"Guard mode off for chat {chat_id}, auto-approving user {user_id}")
+            bot_api.approve_chat_join_request(chat_id, user_id)
+            return {"ok": True}
+
+        log_chan = chat_settings.get("log_channel")
+        user_mention = f"@{user.get('username')}" if user.get('username') else f"<a href='tg://user?id={user_id}'>{user.get('first_name')}</a>"
+        if log_chan:
+            bot_api.send_message(log_chan, f"👤 <b>Новий запит на вхід</b> від {user_mention} (ID: <code>{user_id}</code>) у чат <b>{chat.get('title', chat_id)}</b>. Очікуємо проходження капчі...")
+
         if query_id:
-            chat_id = chat.get("id")
-            user_id = user.get("id")
-            username = user.get("username", "") or user.get("first_name", "")
-            
+            # New API flow (Bot API 10.1+): query_id is present, send Web App inline
             active_queries[query_id] = {
                 "chat_id": chat_id,
                 "user_id": user_id,
                 "timestamp": time.time(),
-                "user_name": username
+                "user_name": username,
+                "mode": "query"
             }
-            # Log verification start
-            database.log_verification_start(chat_id, user_id, username)
-            
-            # Send log channel notification if configured
-            chat_settings = database.get_chat_settings(chat_id)
-            log_chan = chat_settings.get("log_channel")
-            if log_chan:
-                user_mention = f"@{user.get('username')}" if user.get('username') else f"<a href='tg://user?id={user_id}'>{user.get('first_name')}</a>"
-                bot_api.send_message(log_chan, f"👤 <b>Новий запит на вхід</b> від {user_mention} (ID: <code>{user_id}</code>) у чат <b>{chat.get('title', chat_id)}</b>. Очікуємо проходження капчі...")
-
             web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?query_id={query_id}"
-            bot_api.send_chat_join_request_web_app(query_id, web_app_url)
-            
+            result = bot_api.send_chat_join_request_web_app(query_id, web_app_url)
+            logger.info(f"sendChatJoinRequestWebApp result: {result}")
+        else:
+            # Fallback: send PM to user with Web App button
+            session_key = f"{chat_id}_{user_id}"
+            fallback_queries[session_key] = {
+                "chat_id": chat_id,
+                "user_id": user_id,
+                "timestamp": time.time(),
+                "user_name": username,
+                "mode": "fallback"
+            }
+            web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?session={session_key}"
+            chat_title = chat.get('title', str(chat_id))
+            reply_markup = {
+                "inline_keyboard": [[
+                    {"text": "✅ Пройти перевірку", "web_app": {"url": web_app_url}}
+                ]]
+            }
+            result = bot_api.send_message(
+                user_id,
+                f"👋 Привіт! Щоб приєднатись до <b>{chat_title}</b>, пройди коротку перевірку:\n\nНатисни кнопку нижче:",
+                reply_markup=reply_markup
+            )
+            logger.info(f"Fallback PM to user {user_id}: {result}")
+
     return {"ok": True}
 
 @app.get("/api/questions")
-async def get_questions(query_id: str):
-    if query_id not in active_queries:
-        raise HTTPException(status_code=400, detail="Invalid or expired query_id")
-    
-    chat_id = active_queries[query_id]["chat_id"]
+async def get_questions(query_id: str = None, session: str = None):
+    if query_id:
+        if query_id not in active_queries:
+            raise HTTPException(status_code=400, detail="Invalid or expired query_id")
+        chat_id = active_queries[query_id]["chat_id"]
+    elif session:
+        if session not in fallback_queries:
+            raise HTTPException(status_code=400, detail="Invalid or expired session")
+        chat_id = fallback_queries[session]["chat_id"]
+    else:
+        raise HTTPException(status_code=400, detail="query_id or session required")
+
     settings = database.get_chat_settings(chat_id)
     qs = [{"id": i, "q": q["q"]} for i, q in enumerate(settings["questions"])]
     return {"questions": qs}
@@ -199,19 +246,46 @@ async def get_questions(query_id: str):
 async def verify_user(request: Request):
     data = await request.json()
     query_id = data.get("query_id")
+    session = data.get("session")
     answers = data.get("answers", {})
     device_info = data.get("device_info", "")
     client_ip = request.client.host
-    
-    if not query_id or query_id not in active_queries:
-        raise HTTPException(status_code=400, detail="Invalid or expired query_id")
-        
-    query_data = active_queries[query_id]
+
+    # Resolve query_data and mode
+    if query_id and query_id in active_queries:
+        query_data = active_queries[query_id]
+        mode = "query"
+    elif session and session in fallback_queries:
+        query_data = fallback_queries[session]
+        mode = "fallback"
+    else:
+        raise HTTPException(status_code=400, detail="Invalid or expired session")
+
     user_id = query_data["user_id"]
     chat_id = query_data["chat_id"]
-    
     settings = database.get_chat_settings(chat_id)
-    
+
+    def do_decline():
+        if mode == "query":
+            bot_api.answer_chat_join_request_query(query_id, "decline")
+        else:
+            if settings.get("action") == "ban":
+                bot_api.ban_chat_member(chat_id, user_id)
+            else:
+                bot_api.decline_chat_join_request(chat_id, user_id)
+        if mode == "query":
+            active_queries.pop(query_id, None)
+        else:
+            fallback_queries.pop(session, None)
+
+    def do_approve():
+        if mode == "query":
+            bot_api.answer_chat_join_request_query(query_id, "approve")
+            active_queries.pop(query_id, None)
+        else:
+            bot_api.approve_chat_join_request(chat_id, user_id)
+            fallback_queries.pop(session, None)
+
     # 1. Check Captcha Answers
     correct_count = 0
     for idx, q_data in enumerate(settings["questions"]):
@@ -219,7 +293,7 @@ async def verify_user(request: Request):
         correct_options = [str(ans).lower().strip() for ans in q_data["a"]]
         if any(opt in user_ans for opt in correct_options):
             correct_count += 1
-            
+
     if correct_count < len(settings["questions"]):
         status = "banned" if settings["action"] == "ban" else "declined"
         database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
@@ -227,9 +301,9 @@ async def verify_user(request: Request):
         if log_chan:
             action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
             bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
-        bot_api.answer_chat_join_request_query(query_id, "decline")
+        do_decline()
         return {"success": False, "reason": "Неправильні відповіді на капчу."}
-        
+
     # 2. Check Twink / Alt account factors
     if settings["check_ip"]:
         if client_ip in ip_history and ip_history[client_ip] != user_id:
@@ -239,10 +313,10 @@ async def verify_user(request: Request):
             if log_chan:
                 action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
                 bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
-            bot_api.answer_chat_join_request_query(query_id, "decline")
+            do_decline()
             return {"success": False, "reason": "Виявлено підозрілу активність (збіг IP)."}
         ip_history[client_ip] = user_id
-        
+
     if settings["check_avatar"]:
         photos_resp = bot_api.get_user_profile_photos(user_id)
         if photos_resp.get("ok"):
@@ -254,15 +328,14 @@ async def verify_user(request: Request):
                 if log_chan:
                     action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
                     bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
-                bot_api.answer_chat_join_request_query(query_id, "decline")
+                do_decline()
                 return {"success": False, "reason": "У вас відсутня аватарка."}
-                
+
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")
     if log_chan:
         bot_api.send_message(log_chan, f"✅ <b>Користувач схвалений</b> (ID: <code>{user_id}</code>).\nВсі перевірки пройдено успішно!")
-    bot_api.answer_chat_join_request_query(query_id, "approve")
-    active_queries.pop(query_id, None)
+    do_approve()
     return {"success": True}
 
 @app.get("/api/settings")

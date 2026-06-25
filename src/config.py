@@ -10,6 +10,7 @@ ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "")
 
 DEFAULT_SETTINGS = {
     "action": "decline",  # 'decline' or 'ban'
+    "guard_mode": True,   # If False, auto-approve all join requests
     "check_device": True,
     "check_ip": True,
     "check_avatar": True,
