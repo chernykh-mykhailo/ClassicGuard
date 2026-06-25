@@ -281,11 +281,17 @@ async def verify_user(request: Request):
     settings = database.get_chat_settings(chat_id)
 
     def do_decline():
+        act = settings.get("action")
         if mode == "query":
-            bot_api.answer_chat_join_request_query(query_id, "decline")
+            if act == "approve_log":
+                bot_api.answer_chat_join_request_query(query_id, "approve")
+            else:
+                bot_api.answer_chat_join_request_query(query_id, "decline")
         else:
-            if settings.get("action") == "ban":
+            if act == "ban":
                 bot_api.ban_chat_member(chat_id, user_id)
+            elif act == "approve_log":
+                bot_api.approve_chat_join_request(chat_id, user_id)
             else:
                 bot_api.decline_chat_join_request(chat_id, user_id)
         if mode == "query":
@@ -344,27 +350,47 @@ async def verify_user(request: Request):
                 correct_count += 1
 
     if checked == 0 or correct_count < checked:
-        status = "banned" if settings["action"] == "ban" else "declined"
+        act = settings.get("action")
+        if act == "approve_log":
+            status = "declined_but_approved"
+        elif act == "ban":
+            status = "banned"
+        else:
+            status = "declined"
         database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
         log_chan = settings.get("log_channel")
         if log_chan:
-            action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
+            if act == "approve_log":
+                action_ua = "✅ Прийнято (з логуванням)"
+            else:
+                action_ua = "Забанено" if act == "ban" else "Відхилено"
             bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
         do_decline()
-        notify_declined("captcha")
+        if act != "approve_log":
+            notify_declined("captcha")
         return {"success": False, "reason": "Перевірку не пройдено."}
 
     # 2. Check Twink / Alt account factors
     if settings["check_ip"]:
         if client_ip in ip_history and ip_history[client_ip] != user_id:
-            status = "banned" if settings["action"] == "ban" else "declined"
-            database.log_verification_result(chat_id, user_id, client_ip, device_info, f"{status}_ip_match", answers)
+            act = settings.get("action")
+            if act == "approve_log":
+                status = "declined_but_approved_ip_match"
+            elif act == "ban":
+                status = "banned_ip_match"
+            else:
+                status = "declined_ip_match"
+            database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
             log_chan = settings.get("log_channel")
             if log_chan:
-                action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
+                if act == "approve_log":
+                    action_ua = "✅ Прийнято (з логуванням)"
+                else:
+                    action_ua = "Забанено" if act == "ban" else "Відхилено"
                 bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
             do_decline()
-            notify_declined("twink")
+            if act != "approve_log":
+                notify_declined("twink")
             return {"success": False, "reason": "Перевірку не пройдено."}
         ip_history[client_ip] = user_id
 
@@ -373,14 +399,24 @@ async def verify_user(request: Request):
         if photos_resp.get("ok"):
             photos = photos_resp.get("result", {}).get("photos", [])
             if len(photos) == 0:
-                status = "banned" if settings["action"] == "ban" else "declined"
-                database.log_verification_result(chat_id, user_id, client_ip, device_info, f"{status}_no_avatar", answers)
+                act = settings.get("action")
+                if act == "approve_log":
+                    status = "declined_but_approved_no_avatar"
+                elif act == "ban":
+                    status = "banned_no_avatar"
+                else:
+                    status = "declined_no_avatar"
+                database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
                 log_chan = settings.get("log_channel")
                 if log_chan:
-                    action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
+                    if act == "approve_log":
+                        action_ua = "✅ Прийнято (з логуванням)"
+                    else:
+                        action_ua = "Забанено" if act == "ban" else "Відхилено"
                     bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
                 do_decline()
-                notify_declined("twink")
+                if act != "approve_log":
+                    notify_declined("twink")
                 return {"success": False, "reason": "Перевірку не пройдено."}
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)

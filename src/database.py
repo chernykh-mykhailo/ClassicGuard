@@ -30,7 +30,7 @@ def init_db():
                 username TEXT,
                 ip TEXT,
                 user_agent TEXT,
-                status TEXT, -- 'pending', 'approved', 'declined', 'banned'
+                status TEXT, -- 'pending', 'approved', 'declined', 'banned', 'declined_but_approved', etc.
                 answers TEXT, -- JSON string of answers
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
