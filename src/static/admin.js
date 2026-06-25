@@ -63,6 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-avatar").checked = data.check_avatar;
                 document.getElementById("avatar-min-days").value = data.avatar_min_days;
                 document.getElementById("log-channel").value = data.log_channel || "";
+                document.getElementById("contact-link").value = data.contact_link || "";
+                document.getElementById("decline-message").value = data.decline_message || "";
 
                 questionsList.innerHTML = "";
                 if (data.questions) {
@@ -106,6 +108,8 @@ document.addEventListener("DOMContentLoaded", () => {
             check_avatar: document.getElementById("check-avatar").checked,
             avatar_min_days: parseInt(document.getElementById("avatar-min-days").value, 10),
             log_channel: document.getElementById("log-channel").value.trim(),
+            contact_link: document.getElementById("contact-link").value.trim(),
+            decline_message: document.getElementById("decline-message").value.trim(),
             questions: questions
         };
 

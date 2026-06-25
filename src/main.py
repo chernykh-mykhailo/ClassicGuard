@@ -59,6 +59,8 @@ class SettingsModel(BaseModel):
     check_avatar: bool
     avatar_min_days: int
     log_channel: str
+    contact_link: str = ""
+    decline_message: str = ""
     questions: List[Dict[str, Any]]
 
 @app.post("/webhook")
@@ -276,6 +278,19 @@ async def verify_user(request: Request):
             bot_api.approve_chat_join_request(chat_id, user_id)
             fallback_queries.pop(session, None)
 
+    def notify_declined():
+        custom = settings.get("decline_message", "").strip()
+        contact = settings.get("contact_link", "").strip()
+        if custom:
+            msg = custom
+            if contact:
+                msg += f"\n\nЗв'яжіться: {contact}"
+        elif contact:
+            msg = f"На жаль, ваш запит на вступ до чату було відхилено.\n\nЩоб потрапити до чату — зверніться до адміністратора: {contact}"
+        else:
+            msg = "На жаль, ваш запит на вступ до чату було відхилено.\n\nЯкщо ви вважаєте це помилкою — зверніться до адміністратора чату."
+        bot_api.send_message(user_id, msg)
+
     # 1. Check Captcha Answers
     correct_count = 0
     for idx, q_data in enumerate(settings["questions"]):
@@ -292,7 +307,8 @@ async def verify_user(request: Request):
             action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
             bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
         do_decline()
-        return {"success": False, "reason": "Неправильні відповіді на капчу."}
+        notify_declined()
+        return {"success": False, "reason": "Перевірку не пройдено."}
 
     # 2. Check Twink / Alt account factors
     if settings["check_ip"]:
@@ -304,7 +320,8 @@ async def verify_user(request: Request):
                 action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
                 bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
             do_decline()
-            return {"success": False, "reason": "Виявлено підозрілу активність (збіг IP)."}
+            notify_declined()
+            return {"success": False, "reason": "Перевірку не пройдено."}
         ip_history[client_ip] = user_id
 
     if settings["check_avatar"]:
@@ -319,7 +336,8 @@ async def verify_user(request: Request):
                     action_ua = "Забанено" if settings["action"] == "ban" else "Відхилено"
                     bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
                 do_decline()
-                return {"success": False, "reason": "У вас відсутня аватарка."}
+                notify_declined()
+                return {"success": False, "reason": "Перевірку не пройдено."}
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")

@@ -209,6 +209,18 @@
                     </div>
                     <input type="text" id="log-channel" placeholder="-100..." style="width: 200px;">
                 </div>
+                <div class="form-group">
+                    <div>
+                        <label for="contact-link">Куди писати відхиленим</label>
+                        <div class="desc">Посилання або @username адміна, якому писати якщо відхилили (наприклад, @admin)</div>
+                    </div>
+                    <input type="text" id="contact-link" placeholder="@admin або https://t.me/..." style="width: 200px;">
+                </div>
+                <div style="margin-bottom:15px;">
+                    <label for="decline-message" style="font-size:14px; display:block; margin-bottom:6px;">Кастомне повідомлення при провалі</label>
+                    <div class="desc" style="margin-bottom:8px;">Текст повідомлення юзеру при відхиленні. Якщо порожньо — буде стандартне.</div>
+                    <textarea id="decline-message" rows="3" placeholder="Наприклад: На жаль, вхід неможливий. Пишіть адміну..." style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:#fff; padding:8px 12px; border-radius:6px; font-size:14px; resize:vertical;"></textarea>
+                </div>
             </div>
 
             <div class="section">
