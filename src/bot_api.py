@@ -1,5 +1,5 @@
 import requests
-from config import BOT_TOKEN
+from src.config import BOT_TOKEN
 
 API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 

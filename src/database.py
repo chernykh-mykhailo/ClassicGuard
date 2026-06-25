@@ -38,7 +38,7 @@ def init_db():
         conn.commit()
 
 def get_chat_settings(chat_id: int) -> dict:
-    from config import DEFAULT_SETTINGS
+    from src.config import DEFAULT_SETTINGS
     with get_db() as conn:
         row = conn.execute("SELECT config_json FROM settings WHERE chat_id = ?", (chat_id,)).fetchone()
         if row:

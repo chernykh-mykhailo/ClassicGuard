@@ -9,9 +9,9 @@ from typing import List, Dict, Any
 import time
 import os
 
-import config
-import bot_api
-import database
+from src import config
+from src import bot_api
+from src import database
 
 app = FastAPI()
 
