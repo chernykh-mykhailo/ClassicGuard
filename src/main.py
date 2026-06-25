@@ -54,6 +54,9 @@ async def telegram_webhook(request: Request):
         chat_id = chat.get("id")
         user = msg.get("from", {})
         
+        if chat.get("type") in ["group", "supergroup"]:
+            database.get_chat_settings(chat_id)
+        
         if text.startswith("/get_id") or text.startswith("/id"):
             reply_to = msg.get("reply_to_message")
             if reply_to:

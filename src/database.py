@@ -48,6 +48,13 @@ def get_chat_settings(chat_id: int) -> dict:
         row = conn.execute("SELECT config_json FROM settings WHERE chat_id = ?", (chat_id,)).fetchone()
         if row:
             return json.loads(row["config_json"])
+        
+        # Auto-register chat with default settings
+        conn.execute("""
+            INSERT OR IGNORE INTO settings (chat_id, config_json)
+            VALUES (?, ?)
+        """, (chat_id, json.dumps(DEFAULT_SETTINGS, ensure_ascii=False)))
+        conn.commit()
         return DEFAULT_SETTINGS
 
 def save_chat_settings(chat_id: int, config: dict):
