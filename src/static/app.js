@@ -9,8 +9,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("captcha-form");
     const statusDiv = document.getElementById("status");
 
-    // Build request param string
     const paramStr = queryId ? `query_id=${queryId}` : `session=${session}`;
+    const emojiSelections = {}; // questionId -> selected emoji index
 
     if (!queryId && !session) {
         showStatus("Невірне посилання для верифікації.", "error");
@@ -22,13 +22,11 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(data => {
             if (data.questions && data.questions.length > 0) {
                 data.questions.forEach((q) => {
-                    const group = document.createElement("div");
-                    group.className = "form-group";
-                    group.innerHTML = `
-                        <label for="q-${q.id}">${q.q}</label>
-                        <input type="text" id="q-${q.id}" name="${q.id}" required placeholder="Ваша відповідь..." autocomplete="off">
-                    `;
-                    container.appendChild(group);
+                    if (q.type === "emoji") {
+                        renderEmojiQuestion(q);
+                    } else {
+                        renderTextQuestion(q);
+                    }
                 });
             } else if (data.detail) {
                 showStatus("Невірна або застаріла сесія.", "error");
@@ -36,26 +34,68 @@ document.addEventListener("DOMContentLoaded", () => {
                 showStatus("Не вдалося завантажити питання капчі", "error");
             }
         })
-        .catch(() => {
-            showStatus("Помилка з'єднання з сервером", "error");
+        .catch(() => showStatus("Помилка з'єднання з сервером", "error"));
+
+    function renderTextQuestion(q) {
+        const group = document.createElement("div");
+        group.className = "form-group";
+        group.innerHTML = `
+            <label for="q-${q.id}">${q.q}</label>
+            <input type="text" id="q-${q.id}" name="${q.id}" required placeholder="Ваша відповідь..." autocomplete="off">
+        `;
+        container.appendChild(group);
+    }
+
+    function renderEmojiQuestion(q) {
+        const group = document.createElement("div");
+        group.className = "form-group";
+
+        const label = document.createElement("label");
+        label.textContent = q.q;
+        group.appendChild(label);
+
+        const grid = document.createElement("div");
+        grid.className = "emoji-grid";
+
+        q.emojis.forEach((emoji, idx) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "emoji-btn";
+            btn.textContent = emoji;
+            btn.dataset.idx = idx;
+            btn.addEventListener("click", () => {
+                // Deselect all in this grid
+                grid.querySelectorAll(".emoji-btn").forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
+                emojiSelections[q.id] = idx;
+            });
+            grid.appendChild(btn);
         });
+
+        group.appendChild(grid);
+        container.appendChild(group);
+    }
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
-        
+
         const answers = {};
+
+        // Text inputs
         const inputs = form.querySelectorAll("input[type='text']");
         inputs.forEach(input => {
             answers[input.name] = input.value;
         });
 
+        // Emoji selections
+        Object.entries(emojiSelections).forEach(([qId, idx]) => {
+            answers[qId] = idx;
+        });
+
         const deviceInfo = navigator.userAgent;
         showStatus("Перевірка відповідей...", "");
 
-        const payload = {
-            answers: answers,
-            device_info: deviceInfo
-        };
+        const payload = { answers, device_info: deviceInfo };
         if (queryId) payload.query_id = queryId;
         if (session) payload.session = session;
 
@@ -68,14 +108,12 @@ document.addEventListener("DOMContentLoaded", () => {
         .then(data => {
             if (data.success) {
                 showStatus("✅ Успішно! Вас допущено до чату.", "success");
-                setTimeout(() => { tg.close(); }, 3000);
+                setTimeout(() => tg.close(), 3000);
             } else {
                 showStatus(data.reason || "Перевірку не пройдено.", "error");
             }
         })
-        .catch(() => {
-            showStatus("Помилка надсилання перевірки.", "error");
-        });
+        .catch(() => showStatus("Помилка надсилання перевірки.", "error"));
     });
 
     function showStatus(text, type) {

@@ -120,6 +120,43 @@
         .status.success {
             color: var(--success-color);
         }
+
+        /* Emoji captcha grid */
+        .emoji-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 12px 0;
+        }
+
+        .emoji-btn {
+            width: 100%;
+            aspect-ratio: 1;
+            font-size: 36px;
+            background: rgba(255,255,255,0.04);
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+        }
+
+        .emoji-btn:hover {
+            background: rgba(0,136,204,0.15);
+            border-color: var(--accent-color);
+            transform: scale(1.05);
+        }
+
+        .emoji-btn.selected {
+            background: rgba(0,136,204,0.25);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px rgba(0,136,204,0.3);
+            transform: scale(1.08);
+        }
     </style>
 </head>
 <body>

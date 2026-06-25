@@ -69,7 +69,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 questionsList.innerHTML = "";
                 if (data.questions) {
-                    data.questions.forEach(q => renderQuestion(q.q, q.a.join(", ")));
+                    data.questions.forEach(q => {
+                        if (q.type === "emoji") {
+                            renderEmojiQuestion(q.q, q.correct, (q.distractors || []).join(", "));
+                        } else {
+                            renderQuestion(q.q, (q.a || []).join(", "));
+                        }
+                    });
                 }
             });
     }
@@ -77,7 +83,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function renderQuestion(questionText = "", answersText = "") {
         const item = document.createElement("div");
         item.className = "question-item";
+        item.dataset.type = "text";
         item.innerHTML = `
+            <div style="font-size:11px; color:#8f9cae; margin-bottom:6px;">📝 Текстове питання</div>
             <input type="text" placeholder="Запитання (наприклад, Чий Крим?)" class="q-text" value="${questionText}" required>
             <input type="text" placeholder="Варіанти відповідей через кому (наприклад, України, український)" class="q-ans" value="${answersText}" required>
             <button type="button" class="btn-secondary remove-btn" style="background:#ff4a4a; padding:6px 12px; font-size:12px;">Видалити</button>
@@ -86,7 +94,23 @@ document.addEventListener("DOMContentLoaded", () => {
         questionsList.appendChild(item);
     }
 
+    function renderEmojiQuestion(questionText = "", correctEmoji = "", distractorsText = "") {
+        const item = document.createElement("div");
+        item.className = "question-item";
+        item.dataset.type = "emoji";
+        item.innerHTML = `
+            <div style="font-size:11px; color:#8f9cae; margin-bottom:6px;">🎯 Emoji питання</div>
+            <input type="text" placeholder="Текст питання (наприклад, Де паляниця?)" class="q-text" value="${questionText}" required>
+            <input type="text" placeholder="Правильне емодзі (наприклад, 🫓)" class="q-correct" value="${correctEmoji}" required style="width:100%; margin-bottom:8px; box-sizing:border-box;">
+            <input type="text" placeholder="Відволікаючі емодзі через кому (наприклад, 🍓, 🍓, 🍓, 🍓, 🍓)" class="q-distractors" value="${distractorsText}" required>
+            <button type="button" class="btn-secondary remove-btn" style="background:#ff4a4a; padding:6px 12px; font-size:12px;">Видалити</button>
+        `;
+        item.querySelector(".remove-btn").addEventListener("click", () => item.remove());
+        questionsList.appendChild(item);
+    }
+
     addQuestionBtn.addEventListener("click", () => renderQuestion());
+    document.getElementById("add-emoji-question").addEventListener("click", () => renderEmojiQuestion());
 
     form.addEventListener("submit", (e) => {
         e.preventDefault();
@@ -95,9 +119,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const items = questionsList.querySelectorAll(".question-item");
         items.forEach(item => {
             const q = item.querySelector(".q-text").value.trim();
-            const a = item.querySelector(".q-ans").value.split(",").map(ans => ans.trim()).filter(Boolean);
-            if (q && a.length > 0) {
-                questions.push({ q, a });
+            if (item.dataset.type === "emoji") {
+                const correct = item.querySelector(".q-correct").value.trim();
+                const distractors = item.querySelector(".q-distractors").value
+                    .split(",").map(s => s.trim()).filter(Boolean);
+                if (q && correct) questions.push({ type: "emoji", q, correct, distractors });
+            } else {
+                const a = item.querySelector(".q-ans").value.split(",").map(s => s.trim()).filter(Boolean);
+                if (q && a.length > 0) questions.push({ q, a });
             }
         });
 

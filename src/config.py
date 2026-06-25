@@ -20,6 +20,7 @@ DEFAULT_SETTINGS = {
     "decline_msg_captcha": "",  # Message when captcha failed
     "decline_msg_twink": "",   # Message when suspected twink (IP/avatar)
     "questions": [
+        {"type": "emoji", "q": "Де паляниця? 🧐", "correct": "🫓", "distractors": ["🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓"]},
         {"q": "Чий Крим?", "a": ["український", "україна", "україни"]},
         {"q": "Батько наш - ...?", "a": ["бандера"]},
         {"q": "Україна - це ...?", "a": ["європа", "понад усе"]}

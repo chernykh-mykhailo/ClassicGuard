@@ -230,10 +230,32 @@ async def get_questions(query_id: str = None, session: str = None):
     all_qs = settings.get("questions", [])
     if not all_qs:
         raise HTTPException(status_code=404, detail="No questions configured")
-    # Повертаємо одне випадкове питання
-    chosen = random.choice(all_qs)
-    idx = all_qs.index(chosen)
-    return {"questions": [{"id": idx, "q": chosen["q"]}]}
+
+    # Вибираємо одне випадкове питання
+    chosen_idx = random.randrange(len(all_qs))
+    chosen = all_qs[chosen_idx]
+
+    if chosen.get("type") == "emoji":
+        correct_emoji = chosen["correct"]
+        distractors = list(chosen.get("distractors", []))
+        # Build full emoji list: correct + distractors, then shuffle
+        all_emojis = [correct_emoji] + distractors
+        random.shuffle(all_emojis)
+        correct_pos = all_emojis.index(correct_emoji)
+
+        # Store correct position in session
+        store = active_queries if query_id else fallback_queries
+        key = query_id if query_id else session
+        store[key]["emoji_correct"] = {str(chosen_idx): correct_pos}
+
+        return {"questions": [{
+            "id": chosen_idx,
+            "type": "emoji",
+            "q": chosen["q"],
+            "emojis": all_emojis
+        }]}
+    else:
+        return {"questions": [{"id": chosen_idx, "q": chosen["q"], "type": "text"}]}
 
 @app.post("/api/verify")
 async def verify_user(request: Request):
@@ -294,14 +316,34 @@ async def verify_user(request: Request):
         bot_api.send_message(user_id, msg)
 
     # 1. Check Captcha Answers
+    emoji_correct = query_data.get("emoji_correct", {})
     correct_count = 0
-    for idx, q_data in enumerate(settings["questions"]):
-        user_ans = str(answers.get(str(idx), "")).strip().lower()
-        correct_options = [str(ans).lower().strip() for ans in q_data["a"]]
-        if any(opt in user_ans for opt in correct_options):
+    checked = 0
+
+    for q_idx_str, correct_pos in emoji_correct.items():
+        # Emoji question — check selected index
+        user_sel = answers.get(q_idx_str)
+        checked += 1
+        if user_sel is not None and int(user_sel) == correct_pos:
             correct_count += 1
 
-    if correct_count < len(settings["questions"]):
+    all_qs = settings.get("questions", [])
+    for idx, q_data in enumerate(all_qs):
+        idx_str = str(idx)
+        if idx_str in emoji_correct:
+            continue  # already checked above
+        if idx_str not in answers:
+            continue  # question not shown this session
+        checked += 1
+        if q_data.get("type") == "emoji":
+            pass  # handled above
+        else:
+            user_ans = str(answers.get(idx_str, "")).strip().lower()
+            correct_options = [str(a).lower().strip() for a in q_data.get("a", [])]
+            if any(opt in user_ans for opt in correct_options):
+                correct_count += 1
+
+    if checked == 0 or correct_count < checked:
         status = "banned" if settings["action"] == "ban" else "declined"
         database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
         log_chan = settings.get("log_channel")
