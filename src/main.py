@@ -28,7 +28,7 @@ app.add_middleware(
 def startup_event():
     database.init_db()
     if config.BOT_TOKEN != "YOUR_BOT_TOKEN_HERE" and "yourdomain.com" not in config.WEBAPP_URL:
-        webhook_url = f"{config.WEBAPP_URL}/webhook"
+        webhook_url = f"{config.WEBAPP_URL.rstrip('/')}/webhook"
         bot_api.set_webhook(webhook_url)
 
 active_queries = {}
@@ -71,6 +71,14 @@ async def telegram_webhook(request: Request):
                     f"👤 <b>Ваш ID:</b> <code>{user.get('id')}</code>"
                 )
             bot_api.send_message(chat_id, response_text)
+        elif text.startswith("/start"):
+            response_text = (
+                "👋 <b>Вітаю! Я бот ClassicGuard.</b>\n\n"
+                "Я допомагаю захищати чати від спам-ботів та твінк-акаунтів за допомогою перевірок та капчі.\n\n"
+                "ℹ️ <b>Доступні команди:</b>\n"
+                "• <code>/id</code> або <code>/get_id</code> — дізнатись ID чату та ваш ID."
+            )
+            bot_api.send_message(chat_id, response_text)
 
     elif "chat_join_request" in data:
         req = data["chat_join_request"]
@@ -99,7 +107,7 @@ async def telegram_webhook(request: Request):
                 user_mention = f"@{user.get('username')}" if user.get('username') else f"<a href='tg://user?id={user_id}'>{user.get('first_name')}</a>"
                 bot_api.send_message(log_chan, f"👤 <b>Новий запит на вхід</b> від {user_mention} (ID: <code>{user_id}</code>) у чат <b>{chat.get('title', chat_id)}</b>. Очікуємо проходження капчі...")
 
-            web_app_url = f"{config.WEBAPP_URL}/static/index.html?query_id={query_id}"
+            web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?query_id={query_id}"
             bot_api.send_chat_join_request_web_app(query_id, web_app_url)
             
     return {"ok": True}
