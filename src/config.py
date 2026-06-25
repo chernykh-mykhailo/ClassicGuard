@@ -14,7 +14,7 @@ DEFAULT_SETTINGS = {
     "check_device": True,
     "check_ip": True,
     "check_avatar": True,
-    "avatar_min_days": 3,
+    "avatar_min_count": 1,
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",
     "decline_msg_captcha": "",  # Message when captcha failed

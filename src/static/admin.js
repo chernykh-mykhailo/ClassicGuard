@@ -61,7 +61,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-ip").checked = data.check_ip;
                 document.getElementById("check-device").checked = data.check_device;
                 document.getElementById("check-avatar").checked = data.check_avatar;
-                document.getElementById("avatar-min-days").value = data.avatar_min_days;
+                document.getElementById("avatar-min-count").value = data.avatar_min_count ?? 1;
                 document.getElementById("log-channel").value = data.log_channel || "";
                 document.getElementById("contact-link").value = data.contact_link || "";
                 document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
@@ -136,7 +136,7 @@ document.addEventListener("DOMContentLoaded", () => {
             check_ip: document.getElementById("check-ip").checked,
             check_device: document.getElementById("check-device").checked,
             check_avatar: document.getElementById("check-avatar").checked,
-            avatar_min_days: parseInt(document.getElementById("avatar-min-days").value, 10),
+            avatar_min_count: parseInt(document.getElementById("avatar-min-count").value, 10),
             log_channel: document.getElementById("log-channel").value.trim(),
             contact_link: document.getElementById("contact-link").value.trim(),
             decline_msg_captcha: document.getElementById("decline-msg-captcha").value.trim(),
