@@ -171,7 +171,9 @@ async def telegram_webhook(request: Request):
         user_id = user.get("id")
         username = user.get("username", "") or user.get("first_name", "")
 
-        logger.info(f"chat_join_request: user_id={user_id} username={username} chat_id={chat_id} query_id={query_id}")
+        # Full payload log for debugging
+        import json as _json
+        logger.info(f"chat_join_request FULL: {_json.dumps(req, ensure_ascii=False)}")
 
         database.log_verification_start(chat_id, user_id, username)
         chat_settings = database.get_chat_settings(chat_id)
@@ -185,45 +187,27 @@ async def telegram_webhook(request: Request):
         log_chan = chat_settings.get("log_channel")
         user_mention = f"@{user.get('username')}" if user.get('username') else f"<a href='tg://user?id={user_id}'>{user.get('first_name')}</a>"
         if log_chan:
-            bot_api.send_message(log_chan, f"👤 <b>Новий запит на вхід</b> від {user_mention} (ID: <code>{user_id}</code>) у чат <b>{chat.get('title', chat_id)}</b>. Очікуємо проходження капчі...")
+            bot_api.send_message(log_chan, f"👤 <b>Новий запит на вхід</b> від {user_mention} (ID: <code>{user_id}</code>) у чат <b>{chat.get('title', chat_id)}</b>.")
 
-        if query_id:
-            # New API flow (Bot API 10.1+): query_id is present, send Web App inline
-            active_queries[query_id] = {
-                "chat_id": chat_id,
-                "user_id": user_id,
-                "timestamp": time.time(),
-                "user_name": username,
-                "mode": "query"
-            }
-            web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?query_id={query_id}"
-            result = bot_api.send_chat_join_request_web_app(query_id, web_app_url)
-            logger.info(f"sendChatJoinRequestWebApp result: {result}")
-        else:
-            # Fallback: send PM to user with Web App button
-            session_key = f"{chat_id}_{user_id}"
-            fallback_queries[session_key] = {
-                "chat_id": chat_id,
-                "user_id": user_id,
-                "timestamp": time.time(),
-                "user_name": username,
-                "mode": "fallback"
-            }
-            web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?session={session_key}"
-            chat_title = chat.get('title', str(chat_id))
-            reply_markup = {
-                "inline_keyboard": [[
-                    {"text": "✅ Пройти перевірку", "web_app": {"url": web_app_url}}
-                ]]
-            }
-            result = bot_api.send_message(
-                user_id,
-                f"👋 Привіт! Щоб приєднатись до <b>{chat_title}</b>, пройди коротку перевірку:\n\nНатисни кнопку нижче:",
-                reply_markup=reply_markup
-            )
-            logger.info(f"Fallback PM to user {user_id}: {result}")
+        if not query_id:
+            # query_id відсутній — бот ще не є guard bot для цього чату
+            # або клієнт старий. Просто логуємо, нічого не робимо (Telegram сам показує кнопки адміну)
+            logger.warning(f"No query_id in chat_join_request for user {user_id} in chat {chat_id}. Bot may not be guard bot yet.")
+            return {"ok": True}
+
+        # Bot API 10.1+: надсилаємо Web App прямо в діалог join request
+        active_queries[query_id] = {
+            "chat_id": chat_id,
+            "user_id": user_id,
+            "timestamp": time.time(),
+            "user_name": username,
+        }
+        web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?query_id={query_id}"
+        result = bot_api.send_chat_join_request_web_app(query_id, web_app_url)
+        logger.info(f"sendChatJoinRequestWebApp result: {result}")
 
     return {"ok": True}
+
 
 @app.get("/api/questions")
 async def get_questions(query_id: str = None, session: str = None):
