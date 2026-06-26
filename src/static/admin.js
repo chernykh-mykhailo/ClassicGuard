@@ -181,9 +181,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 customLangContainer.innerHTML = "";
                 customLanguages.forEach(l => renderCustomLangTag(l));
 
+                // Load questions - if none in DB, load defaults from config
                 questionsList.innerHTML = "";
-                if (data.questions) {
-                    data.questions.forEach(q => {
+                const questions = data.questions || [];
+                
+                if (questions.length === 0) {
+                    // Load default questions from config
+                    const defaultSettings = PRESETS.balanced;
+                    // We need to get defaults from server, but for now use hardcoded defaults
+                    const defaultQuestions = [
+                        {"type": "emoji", "q": "Де паляниця? 🧐", "correct": "🫓", "distractors": ["🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓"]},
+                        {"type": "text", "q": "Чий Крим?", "a": ["український", "україна", "україни"], "choices": ["Україна", "Росія", "Нічий", "Спірний"]},
+                        {"type": "text", "q": "Батько наш - ...?", "a": ["бандера"], "choices": ["Бандера", "Шевченко", "Франко", "Мазепа"]},
+                        {"type": "text", "q": "Україна - це ...?", "a": ["європа", "понад усе"]},
+                        {"type": "text", "q": "Столиця України?", "a": ["київ", "kyiv"], "choices": ["Київ", "Москва", "Мінськ", "Варшава"]},
+                        {"type": "text", "q": "Якою мовою розмовляють в Україні?", "a": ["українською", "українська"]},
+                        {"type": "emoji", "q": "Яка тварина символ України? 🐺", "correct": "🐺", "distractors": ["🦊", "🐻", "🐗", "🦌", "🦅", "🐱", "🐶", "🐰"]},
+                        {"type": "text", "q": "Якого кольору прапор України?", "a": ["синьо-жовтий", "синій і жовтий", "blue and yellow", "жовто-блакитний"], "choices": ["Синьо-жовтий", "Червоно-чорний", "Біло-червоний", "Зелено-жовтий"]}
+                    ];
+                    
+                    defaultQuestions.forEach(q => {
+                        if (q.type === "emoji") {
+                            renderEmojiQuestion(q.q, q.correct, (q.distractors || []).join(", "));
+                        } else if (q.type === "choice") {
+                            renderChoiceQuestion(q.q, (q.a || [])[0] || "", (q.choices || []).join(", "));
+                        } else {
+                            renderQuestion(q.q, (q.a || []).join(", "));
+                        }
+                    });
+                } else {
+                    questions.forEach(q => {
                         if (q.type === "emoji") {
                             renderEmojiQuestion(q.q, q.correct, (q.distractors || []).join(", "));
                         } else if (q.type === "choice") {

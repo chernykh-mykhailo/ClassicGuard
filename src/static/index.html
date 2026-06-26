@@ -143,6 +143,8 @@
             justify-content: center;
             padding: 0;
             margin: 0;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .emoji-btn:hover {
@@ -151,11 +153,89 @@
             transform: scale(1.05);
         }
 
+        .emoji-btn:active {
+            transform: scale(0.95);
+            background: rgba(0,136,204,0.2);
+        }
+
         .emoji-btn.selected {
             background: rgba(0,136,204,0.25);
             border-color: var(--accent-color);
             box-shadow: 0 0 0 3px rgba(0,136,204,0.3);
             transform: scale(1.08);
+        }
+
+        /* Responsive design for mobile */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px;
+                border-radius: 12px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            p {
+                font-size: 13px;
+                margin-bottom: 20px;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+                margin: 10px 0;
+            }
+
+            .emoji-btn {
+                font-size: 32px;
+                border-radius: 10px;
+            }
+
+            input[type="text"] {
+                font-size: 16px; /* Prevents zoom on iOS */
+                padding: 14px;
+            }
+
+            button[type="submit"] {
+                font-size: 16px;
+                padding: 16px;
+            }
+
+            label {
+                font-size: 12px;
+            }
+        }
+
+        @media (max-width: 380px) {
+            .emoji-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+
+            .emoji-btn {
+                font-size: 28px;
+            }
+        }
+
+        /* Tablet and desktop */
+        @media (min-width: 768px) {
+            .container {
+                max-width: 500px;
+            }
+
+            .emoji-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 12px;
+            }
+
+            .emoji-btn {
+                font-size: 40px;
+            }
         }
     </style>
 </head>
