@@ -59,7 +59,10 @@ class SettingsModel(BaseModel):
     check_avatar: bool
     check_premium: bool = True
     check_language: bool = True
+    log_ru_language: bool = False
     check_fingerprint: bool = True
+    check_account_age: bool = True
+    min_account_age_months: int = 3
     avatar_min_count: int = 1
     log_channel: str
     contact_link: str = ""
@@ -453,6 +456,43 @@ async def verify_user(request: Request):
     if log_chan and settings.get("check_language", True):
         if lang_code and lang_code not in ["uk", "ru", "be", "en"]:
             bot_api.send_message(log_chan, f"ℹ️ <b>Підозріла мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code}.")
+        if lang_code == "ru" and settings.get("log_ru_language", False):
+            bot_api.send_message(log_chan, f"⚠️ <b>Мова РФ</b>: (ID: <code>{user_id}</code>). Користувач з російською мовою інтерфейсу.")
+
+    # 6. Check Account Age (estimated from Telegram ID)
+    if settings.get("check_account_age", True):
+        min_months = settings.get("min_account_age_months", 3)
+        # Approximate: Telegram started in Aug 2013 (~562M users by start of 2024).
+        # Rough formula: user_id / rate_per_month ≈ months since telegram start
+        # ~13M new IDs per month in recent years. Older IDs had slower growth.
+        # Conservative estimate: newer IDs are larger numbers
+        # Telegram launched Aug 2013, ~2013.66 years
+        # By roughly estimating: (user_id / 13_000_000) gives approx months since ID 0
+        if user_id > 0:
+            approx_months = user_id // 13_000_000  # rough months since Telegram launch
+            approx_years = approx_months // 12
+            if user_id > 0 and approx_months < min_months:
+                act = settings.get("action")
+                if act == "approve_log":
+                    status = "declined_but_approved_young_account"
+                elif act == "ban":
+                    status = "banned_young_account"
+                else:
+                    status = "declined_young_account"
+                database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
+                log_chan = settings.get("log_channel")
+                if log_chan:
+                    if act == "approve_log":
+                        action_ua = "✅ Прийнято (з логуванням)"
+                    else:
+                        action_ua = "Забанено" if act == "ban" else "Відхилено"
+                    bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Молодий акаунт)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Акаунту менше ніж {min_months} міс. (приблизно {approx_months} міс.).")
+                do_decline()
+                if act != "approve_log":
+                    notify_declined("twink")
+                return {"success": False, "reason": "Перевірку не пройдено."}
+            if log_chan:
+                bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>: (ID: <code>{user_id}</code>). Приблизний вік: {approx_months} міс. ({approx_years} років).")
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")

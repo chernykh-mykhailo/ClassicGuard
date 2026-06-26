@@ -16,7 +16,10 @@ DEFAULT_SETTINGS = {
     "check_avatar": True,
     "check_premium": True,
     "check_language": True,
+    "log_ru_language": False,
     "check_fingerprint": True,
+    "check_account_age": True,
+    "min_account_age_months": 3,
     "avatar_min_count": 1,
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",

@@ -64,7 +64,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("avatar-min-count").value = data.avatar_min_count ?? 1;
                 document.getElementById("check-premium").checked = data.check_premium !== false;
                 document.getElementById("check-language").checked = data.check_language !== false;
+                document.getElementById("log-ru-language").checked = data.log_ru_language === true;
                 document.getElementById("check-fingerprint").checked = data.check_fingerprint !== false;
+                document.getElementById("check-account-age").checked = data.check_account_age !== false;
+                document.getElementById("min-account-age-months").value = data.min_account_age_months ?? 3;
                 document.getElementById("log-channel").value = data.log_channel || "";
                 document.getElementById("contact-link").value = data.contact_link || "";
                 document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
@@ -142,7 +145,10 @@ document.addEventListener("DOMContentLoaded", () => {
             avatar_min_count: parseInt(document.getElementById("avatar-min-count").value, 10),
             check_premium: document.getElementById("check-premium").checked,
             check_language: document.getElementById("check-language").checked,
+            log_ru_language: document.getElementById("log-ru-language").checked,
             check_fingerprint: document.getElementById("check-fingerprint").checked,
+            check_account_age: document.getElementById("check-account-age").checked,
+            min_account_age_months: parseInt(document.getElementById("min-account-age-months").value, 10),
             log_channel: document.getElementById("log-channel").value.trim(),
             contact_link: document.getElementById("contact-link").value.trim(),
             decline_msg_captcha: document.getElementById("decline-msg-captcha").value.trim(),
