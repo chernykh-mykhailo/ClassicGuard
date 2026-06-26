@@ -4,391 +4,664 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ClassicGuard - Панель Налаштувань</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-color: #0d0f12;
-            --card-bg: rgba(20, 24, 33, 0.7);
-            --border-color: rgba(255, 255, 255, 0.08);
-            --accent-color: #0088cc;
-            --text-color: #e3e6eb;
-            --success-color: #2ec4b6;
+            --bg: #0d0f12;
+            --card: rgba(18, 22, 32, 0.92);
+            --card2: rgba(255,255,255,0.03);
+            --border: rgba(255,255,255,0.09);
+            --accent: #0088cc;
+            --accent2: #0ea5e9;
+            --text: #dde3ee;
+            --muted: #7a8799;
+            --danger: #ef4444;
+            --success: #22c55e;
+            --radius: 10px;
         }
 
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background: var(--bg-color);
-            color: var(--text-color);
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-            background-image: radial-gradient(circle at top left, rgba(0, 136, 204, 0.1), transparent 400px);
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            min-height: 100vh;
+            background-image:
+                radial-gradient(ellipse at 0% 0%, rgba(0,136,204,0.12) 0%, transparent 50%),
+                radial-gradient(ellipse at 100% 100%, rgba(14,165,233,0.07) 0%, transparent 50%);
         }
 
         .container {
-            max-width: 600px;
+            max-width: 680px;
             margin: 0 auto;
-            background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            padding: 20px 16px 40px;
         }
 
-        /* Full width on desktop */
-        @media (min-width: 768px) {
-            .container {
-                max-width: 100%;
-                border-radius: 0;
-                border-left: none;
-                border-right: none;
-            }
-        }
-
-        h1 {
-            font-size: 24px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-
-        .section {
-            margin-bottom: 25px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .section h2 {
-            font-size: 18px;
-            margin-bottom: 15px;
-            color: #b0b9c6;
-        }
-
-        .form-group {
-            margin-bottom: 15px;
+        /* Header */
+        .page-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
         }
-
-        label {
-            font-size: 14px;
+        .page-header h1 {
+            font-size: 22px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e3e8f0, #0ea5e9);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-
-        .desc {
-            font-size: 12px;
-            color: #8f9cae;
-            margin-top: 4px;
-            max-width: 80%;
-        }
-
-        select, input[type="number"], input[type="text"] {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            color: #fff;
-            padding: 8px 12px;
+        .header-link {
+            color: var(--accent2);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+            padding: 6px 12px;
+            border: 1px solid rgba(14,165,233,0.3);
             border-radius: 6px;
-            font-size: 14px;
+            transition: background 0.2s;
+        }
+        .header-link:hover { background: rgba(14,165,233,0.1); }
+
+        /* Chat selector */
+        #chat-selector-container {
+            display: none;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 24px;
+            backdrop-filter: blur(16px);
+        }
+        #chat-selector-container h2 {
+            font-size: 16px;
+            color: var(--muted);
+            margin-bottom: 16px;
         }
 
-        select:focus, input:focus {
-            outline: none;
-            border-color: var(--accent-color);
+        /* Section card */
+        .section {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 14px;
+            backdrop-filter: blur(16px);
         }
-
-        .question-item {
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
-
-        .question-item input {
-            width: 100%;
-            margin-bottom: 8px;
-            box-sizing: border-box;
-        }
-
-        button {
-            background: var(--accent-color);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 12px 20px;
+        .section-title {
             font-size: 15px;
             font-weight: 600;
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* Form row — label left, control right */
+        .form-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .form-row:last-child { border-bottom: none; }
+
+        .form-row-label { flex: 1; min-width: 0; }
+        .form-row-label .label-text {
+            font-weight: 500;
+            font-size: 14px;
+            display: block;
+            margin-bottom: 2px;
+        }
+        .form-row-label .label-desc {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.4;
+        }
+
+        .form-row-control {
+            flex-shrink: 0;
+        }
+
+        /* Inputs */
+        select, input[type="number"], input[type="text"], textarea {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 7px 11px;
+            border-radius: 7px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s, background 0.2s;
+            outline: none;
+        }
+        select:focus, input:focus, textarea:focus {
+            border-color: var(--accent);
+            background: rgba(0,136,204,0.07);
+        }
+        select { cursor: pointer; }
+        select option { background: #1a1f2e; }
+
+        input[type="number"] { width: 72px; text-align: center; }
+
+        textarea {
+            width: 100%;
+            resize: vertical;
+            margin-top: 8px;
+        }
+
+        /* Toggle switch */
+        .toggle {
+            position: relative;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .toggle-track {
+            position: absolute;
+            inset: 0;
+            background: rgba(255,255,255,0.12);
+            border-radius: 34px;
             cursor: pointer;
-            transition: opacity 0.2s;
+            transition: background 0.25s;
+            border: 1px solid var(--border);
+        }
+        .toggle-thumb {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 2px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.25s;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+        }
+        .toggle input:checked ~ .toggle-track { background: var(--accent); border-color: var(--accent); }
+        .toggle input:checked ~ .toggle-track .toggle-thumb { transform: translateX(20px); }
+
+        /* Buttons */
+        .btn {
+            border: none;
+            border-radius: 8px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, background 0.2s;
+            font-family: inherit;
+        }
+        .btn:hover { opacity: 0.88; }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-secondary { background: rgba(255,255,255,0.09); color: var(--text); border: 1px solid var(--border); }
+        .btn-danger { background: rgba(239,68,68,0.15); color: var(--danger); border: 1px solid rgba(239,68,68,0.3); }
+        .btn-full { width: 100%; padding: 13px; font-size: 15px; }
+        .btn-sm { padding: 5px 12px; font-size: 12px; border-radius: 6px; }
+
+        /* Language chips */
+        #language-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .lang-chip {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            cursor: pointer;
+            background: var(--card2);
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .lang-chip:has(input:checked) {
+            border-color: var(--accent);
+            background: rgba(0,136,204,0.12);
+        }
+        .lang-chip input { width: 14px; height: 14px; accent-color: var(--accent); cursor: pointer; }
+
+        .custom-lang-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .custom-lang-row input { flex: 1; }
+
+        #custom-lang-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .lang-tag {
+            background: rgba(0,136,204,0.18);
+            border: 1px solid rgba(0,136,204,0.4);
+            border-radius: 5px;
+            padding: 3px 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .lang-tag button {
+            background: none;
+            border: none;
+            color: var(--danger);
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0;
         }
 
-        button:hover {
-            opacity: 0.9;
+        /* Questions */
+        #questions-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 14px; }
+
+        .question-item {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px;
+            position: relative;
+        }
+        .question-item-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        .question-badge {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 3px 8px;
+            border-radius: 4px;
+            background: rgba(0,136,204,0.18);
+            color: var(--accent2);
+        }
+        .question-badge.emoji { background: rgba(255,193,7,0.15); color: #fbbf24; }
+        .question-badge.choice { background: rgba(34,197,94,0.15); color: #4ade80; }
+
+        .question-field {
+            margin-bottom: 8px;
+        }
+        .question-field label {
+            display: block;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+        }
+        .question-field input {
+            width: 100%;
         }
 
-        .btn-secondary {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            margin-top: 10px;
+        .add-question-btns {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
         }
 
+        /* Save bar */
         .save-bar {
-            margin-top: 30px;
-            text-align: right;
+            margin-top: 20px;
         }
+
+        /* Textarea full-width rows */
+        .form-row-full {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .form-row-full:last-child { border-bottom: none; }
+        .form-row-full .label-text { font-weight: 500; font-size: 14px; display: block; margin-bottom: 2px; }
+        .form-row-full .label-desc { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>⚙️ Налаштування ClassicGuard</h1>
-        
-        <div style="margin-bottom: 20px;">
-            <a href="/static/spammer-db.html" style="color: var(--accent-color); text-decoration: none; font-size: 14px;">🌍 Відкрити базу спамерів</a>
-        </div>
+<div class="container">
+    <div class="page-header">
+        <h1>⚙️ ClassicGuard</h1>
+        <a href="/static/spammer-db.html" class="header-link">🌍 База спамерів</a>
+    </div>
 
-        <div id="chat-selector-container" style="display:none; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: left;">
-            <h2 style="font-size: 18px; margin-bottom: 15px; color: #b0b9c6;">Оберіть чат для налаштування</h2>
-            <div class="form-group">
-                <select id="chat-select" style="width: 100%; box-sizing: border-box; padding: 10px; margin-bottom: 15px;"></select>
-            </div>
-            <button type="button" id="select-chat-btn" style="width: 100%;">Обрати групу</button>
+    <div id="chat-selector-container">
+        <h2>Оберіть чат для налаштування</h2>
+        <div class="form-row" style="border:none; padding:0; margin-bottom:12px;">
+            <select id="chat-select" style="width:100%; padding:10px;"></select>
         </div>
-        
-        <form id="settings-form">
-            <div class="section">
-                <h2>🎯 Режим захисту</h2>
-                <div class="form-group">
-                    <div>
-                        <label for="preset">Швидкий preset</label>
-                        <div class="desc">Виберіть готовий набір налаштувань</div>
-                    </div>
-                    <select id="preset" style="width: 200px;">
+        <button type="button" id="select-chat-btn" class="btn btn-primary btn-full">Обрати групу</button>
+    </div>
+
+    <form id="settings-form">
+
+        <!-- Режим захисту -->
+        <div class="section">
+            <div class="section-title">🎯 Режим захисту</div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Захист увімкнено</span>
+                    <span class="label-desc">Вмикає/вимикає перевірку нових учасників</span>
+                </div>
+                <div class="form-row-control">
+                    <label class="toggle">
+                        <input type="checkbox" id="guard-mode" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Швидкий preset</span>
+                    <span class="label-desc">Готовий набір налаштувань</span>
+                </div>
+                <div class="form-row-control">
+                    <select id="preset" style="width:190px;">
                         <option value="custom">🔧 Користувацький</option>
-                        <option value="simple">😊 Простий (для куховарки)</option>
-                        <option value="balanced" selected>⚖️ Збалансований (рекомендовано)</option>
+                        <option value="simple">😊 Простий</option>
+                        <option value="balanced" selected>⚖️ Збалансований</option>
                         <option value="strict">🔒 Строгий</option>
                         <option value="ultra">💀 Ультра</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <div>
-                        <label for="action">Дія при невдалій перевірці</label>
-                        <div class="desc">Що робити з користувачем, який не пройшов капчу/перевірку</div>
-                    </div>
-                    <select id="action">
+            </div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Дія при невдалій перевірці</span>
+                    <span class="label-desc">Що робити з тим, хто не пройшов</span>
+                </div>
+                <div class="form-row-control">
+                    <select id="action" style="width:190px;">
                         <option value="decline">Відхилити запит</option>
-                        <option value="ban">Забанити користувача</option>
-                        <option value="approve_log">✅ Прийняти, але сповістити в логи</option>
+                        <option value="ban">Забанити</option>
+                        <option value="approve_log">✅ Прийняти + лог</option>
                     </select>
                 </div>
             </div>
+        </div>
 
-            <div class="section">
-                <h2>🛡️ Основні перевірки</h2>
-                
-                <div class="form-group">
-                    <div>
-                        <label for="check-ip">Перевірка по IP</label>
-                        <div class="desc">Виявляти декілька запитів з однієї адреси</div>
-                    </div>
-                    <input type="checkbox" id="check-ip">
-                </div>
+        <!-- Основні перевірки -->
+        <div class="section">
+            <div class="section-title">🛡️ Основні перевірки</div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-device">Перевірка девайсу</label>
-                        <div class="desc">Аналізувати User-Agent браузера</div>
-                    </div>
-                    <input type="checkbox" id="check-device">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка по IP</span>
+                    <span class="label-desc">Виявляти кілька запитів з однієї адреси</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-ip"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-avatar">Перевірка аватарки</label>
-                        <div class="desc">Вимагати наявність аватара</div>
-                    </div>
-                    <input type="checkbox" id="check-avatar">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка девайсу</span>
+                    <span class="label-desc">Аналізувати User-Agent браузера</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-device"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="avatar-min-count">Мінімальна кількість аватарок</label>
-                        <div class="desc">Скільки аватарок має мати користувач (0 = вимкнути перевірку)</div>
-                    </div>
-                    <input type="number" id="avatar-min-count" min="0" max="10" value="1" style="width: 60px;">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка аватарки</span>
+                    <span class="label-desc">Вимагати наявність аватара</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-avatar"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-premium">Перевірка Premium</label>
-                        <div class="desc">Логувати користувачів без Telegram Premium в каналі логів</div>
-                    </div>
-                    <input type="checkbox" id="check-premium">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Мін. кількість аватарок</span>
+                    <span class="label-desc">0 = вимкнути</span>
                 </div>
+                <div class="form-row-control">
+                    <input type="number" id="avatar-min-count" min="0" max="10" value="1">
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-language">Перевірка мови</label>
-                        <div class="desc">Логувати підозрілі мови інтерфейсу (не українська/російська/англійська)</div>
-                    </div>
-                    <input type="checkbox" id="check-language">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка Premium</span>
+                    <span class="label-desc">Логувати без Telegram Premium</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-premium"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div style="margin-bottom:15px;">
-                    <label style="font-size:14px; display:block; margin-bottom:6px;">⚠️ Логувати мови (оберіть які)</label>
-                    <div class="desc" style="margin-bottom:8px;">Користувачі з обраними мовами будуть логуватися в канал</div>
-                    <div id="language-checkboxes" style="display:flex; flex-wrap:wrap; gap:8px;">
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="ru"> 🇷🇺 RU</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="be"> 🇧🇾 BE</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="tr"> 🇹🇷 TR</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="zh"> 🇨🇳 ZH</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="ar"> 🇸🇦 AR</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="fa"> 🇮🇷 FA</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="hi"> 🇮🇳 HI</label>
-                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="vi"> 🇻🇳 VI</label>
-                    </div>
-                    <div style="margin-top:8px; display:flex; gap:8px;">
-                        <input type="text" id="custom-lang-input" placeholder="➕ Кастомна мова (напр. es, fr, de...)" style="flex:1;">
-                        <button type="button" id="add-custom-lang-btn" style="background:rgba(255,255,255,0.1); padding:8px 12px; font-size:13px;">Додати</button>
-                    </div>
-                    <div id="custom-lang-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка мови</span>
+                    <span class="label-desc">Логувати підозрілі мови інтерфейсу</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-language"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-fingerprint">Збір fingerprint</label>
-                        <div class="desc">Збирати Canvas/WebGL відбиток пристрою для виявлення мультиакаунтів</div>
-                    </div>
-                    <input type="checkbox" id="check-fingerprint">
+            <div style="padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04);">
+                <div class="label-text" style="font-weight:500; margin-bottom:4px;">⚠️ Логувати мови</div>
+                <div class="label-desc" style="font-size:12px; color:var(--muted); margin-bottom:10px;">Користувачі з обраними мовами будуть логуватися в канал</div>
+                <div id="language-checkboxes">
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="ru"> 🇷🇺 RU</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="be"> 🇧🇾 BE</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="tr"> 🇹🇷 TR</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="zh"> 🇨🇳 ZH</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="ar"> 🇸🇦 AR</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="fa"> 🇮🇷 FA</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="hi"> 🇮🇳 HI</label>
+                    <label class="lang-chip"><input type="checkbox" class="lang-cb" value="vi"> 🇻🇳 VI</label>
                 </div>
+                <div class="custom-lang-row">
+                    <input type="text" id="custom-lang-input" placeholder="➕ Кастомна мова (es, fr, de…)">
+                    <button type="button" id="add-custom-lang-btn" class="btn btn-secondary btn-sm">Додати</button>
+                </div>
+                <div id="custom-lang-tags"></div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-account-age">Перевірка віку акаунта</label>
-                        <div class="desc">Блокувати занадто свіжі акаунти (оцінка за ID)</div>
-                    </div>
-                    <input type="checkbox" id="check-account-age">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Збір fingerprint</span>
+                    <span class="label-desc">Canvas/WebGL відбиток для виявлення мультиакаунтів</span>
                 </div>
-                <div class="form-group">
-                    <div>
-                        <label for="min-account-age-months">Мінімальний вік (місяців)</label>
-                        <div class="desc">Акаунт має бути старше N місяців (3 = ~ID > 39M)</div>
-                    </div>
-                    <input type="number" id="min-account-age-months" min="1" max="120" value="3" style="width: 60px;">
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-fingerprint"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-cas">🛡️ CAS (Combot Anti-Spam)</label>
-                        <div class="desc">Перевірка користувача в базі спам-заблокованих CAS</div>
-                    </div>
-                    <input type="checkbox" id="check-cas">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Перевірка віку акаунта</span>
+                    <span class="label-desc">Блокувати занадто свіжі акаунти</span>
                 </div>
-                <div class="form-group">
-                    <div>
-                        <label for="cas-action">Дія при CAS-блокі</label>
-                        <div class="desc">Що робити, якщо користувач є в базі CAS</div>
-                    </div>
-                    <select id="cas-action">
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-account-age"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Мін. вік (місяців)</span>
+                    <span class="label-desc">3 міс ≈ ID > 39M</span>
+                </div>
+                <div class="form-row-control">
+                    <input type="number" id="min-account-age-months" min="1" max="120" value="3">
+                </div>
+            </div>
+        </div>
+
+        <!-- Розширені перевірки -->
+        <div class="section">
+            <div class="section-title">🔍 Розширені перевірки</div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">🛡️ CAS (Combot Anti-Spam)</span>
+                    <span class="label-desc">Перевірка в базі заблокованих CAS</span>
+                </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-cas"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Дія при CAS-блоці</span>
+                    <span class="label-desc">Що робити якщо є в базі CAS</span>
+                </div>
+                <div class="form-row-control">
+                    <select id="cas-action" style="width:175px;">
                         <option value="block">Забанити</option>
                         <option value="log">Тільки логувати</option>
-                        <option value="approve_log">Прийняти, але логувати</option>
+                        <option value="approve_log">Прийняти + лог</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-global-spammer-db">🌍 Глобальна база спамерів</label>
-                        <div class="desc">Блокувати користувачів, яких забанили в 3+ різних чатах (захист від фолс-позитивів)</div>
-                    </div>
-                    <input type="checkbox" id="check-global-spammer-db">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">🌍 Глобальна база спамерів</span>
+                    <span class="label-desc">Блокувати забанених у 3+ чатах</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-global-spammer-db"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-ban-commands">⚔️ Команди /ban</label>
-                        <div class="desc">Дозволити адмінам використовувати /ban переман та /ban спам для ручного звіту</div>
-                    </div>
-                    <input type="checkbox" id="check-ban-commands">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">⚔️ Команди /ban</span>
+                    <span class="label-desc">Ручний звіт адмінів через /ban переман / спам</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-ban-commands"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="passive-ban-monitoring">👁️ Пасивний моніторинг банів</label>
-                        <div class="desc">Аналізувати команди /ban інших ботів в чаті та додавати в базу спамерів</div>
-                    </div>
-                    <input type="checkbox" id="passive-ban-monitoring">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">👁️ Пасивний моніторинг банів</span>
+                    <span class="label-desc">Аналізувати /ban інших ботів в чаті</span>
                 </div>
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="passive-ban-monitoring"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="check-osint">🔍 OSINT перевірка</label>
-                        <div class="desc">Повна інформація про профіль через юзер-бот (місяць реєстрації, країна, scam-позначки)</div>
-                    </div>
-                    <input type="checkbox" id="check-osint">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">🔭 OSINT перевірка</span>
+                    <span class="label-desc">Повна інформація через юзер-бот (scam-позначки тощо)</span>
                 </div>
-                <div class="form-group">
-                    <div>
-                        <label for="osint-action">Дія при OSINT-підозрі</label>
-                        <div class="desc">Що робити, якщо OSINT виявить підозрілого користувача</div>
-                    </div>
-                    <select id="osint-action">
+                <div class="form-row-control">
+                    <label class="toggle"><input type="checkbox" id="check-osint"><div class="toggle-track"><div class="toggle-thumb"></div></div></label>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Дія при OSINT-підозрі</span>
+                    <span class="label-desc">Що робити при підозрілому профілі</span>
+                </div>
+                <div class="form-row-control">
+                    <select id="osint-action" style="width:175px;">
                         <option value="log">Тільки логувати</option>
                         <option value="block">Блокувати</option>
-                        <option value="approve_log">Прийняти, але логувати</option>
+                        <option value="approve_log">Прийняти + лог</option>
                     </select>
                 </div>
-            <div class="section">
-                <h2>Логування</h2>
-                <div class="form-group">
-                    <div>
-                        <label for="log-channel">ID Каналу для логів</label>
-                        <div class="desc">Куди надсилати дії бота та зміни налаштувань (наприклад, -100xxxxxxxxxx)</div>
-                    </div>
-                    <input type="text" id="log-channel" placeholder="-100..." style="width: 200px;">
+            </div>
+        </div>
+
+        <!-- Логування -->
+        <div class="section">
+            <div class="section-title">📋 Логування та повідомлення</div>
+
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">ID каналу для логів</span>
+                    <span class="label-desc">наприклад, -100xxxxxxxxxx</span>
                 </div>
-                <div class="form-group">
-                    <div>
-                        <label for="contact-link">Куди писати відхиленим</label>
-                        <div class="desc">Посилання або @username адміна, якому писати якщо відхилили (наприклад, @admin)</div>
-                    </div>
-                    <input type="text" id="contact-link" placeholder="@admin або https://t.me/..." style="width: 200px;">
-                </div>
-                <div style="margin-bottom:15px;">
-                    <label for="decline-msg-captcha" style="font-size:14px; display:block; margin-bottom:6px;">💬 Повідомлення при провалі капчі</label>
-                    <div class="desc" style="margin-bottom:8px;">Коли користувач дав неправильну відповідь</div>
-                    <textarea id="decline-msg-captcha" rows="3" placeholder="Наприклад: На жаль, вхід неможливий. Пишіть адміну..." style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:#fff; padding:8px 12px; border-radius:6px; font-size:14px; resize:vertical;"></textarea>
-                </div>
-                <div style="margin-bottom:15px;">
-                    <label for="decline-msg-twink" style="font-size:14px; display:block; margin-bottom:6px;">🕵️ Повідомлення при підозрі на твінка</label>
-                    <div class="desc" style="margin-bottom:8px;">Коли IP/аватар видають твінк-акаунт</div>
-                    <textarea id="decline-msg-twink" rows="3" placeholder="Наприклад: Виявлено підозрілу активність. Пишіть адміну..." style="width:100%; box-sizing:border-box; background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:#fff; padding:8px 12px; border-radius:6px; font-size:14px; resize:vertical;"></textarea>
+                <div class="form-row-control">
+                    <input type="text" id="log-channel" placeholder="-100..." style="width:160px;">
                 </div>
             </div>
 
-            <div class="section">
-                <h2>Питання Капчі</h2>
-                <div class="form-group">
-                    <div>
-                        <label for="questions-count">Кількість питань за раз</label>
-                        <div class="desc">Скільки випадкових питань показувати за один раз (1 = одне випадкове)</div>
-                    </div>
-                    <input type="number" id="questions-count" min="1" max="10" value="1" style="width: 60px;">
+            <div class="form-row">
+                <div class="form-row-label">
+                    <span class="label-text">Куди писати відхиленим</span>
+                    <span class="label-desc">@username або https://t.me/…</span>
                 </div>
-                <div id="questions-list"></div>
-                <div style="display:flex; gap:10px; margin-top:10px;">
-                    <button type="button" class="btn-secondary" id="add-question" style="flex:1;">+ Текстове питання</button>
-                    <button type="button" class="btn-secondary" id="add-choice-question" style="flex:1;">📋 Питання з вибором</button>
-                    <button type="button" class="btn-secondary" id="add-emoji-question" style="flex:1;">🎯 Emoji питання</button>
+                <div class="form-row-control">
+                    <input type="text" id="contact-link" placeholder="@admin" style="width:160px;">
                 </div>
             </div>
 
-            <div class="save-bar">
-                <button type="submit">Зберегти налаштування</button>
+            <div class="form-row-full">
+                <span class="label-text">💬 Повідомлення при провалі капчі</span>
+                <div class="label-desc">Надсилається коли дана неправильна відповідь</div>
+                <textarea id="decline-msg-captcha" rows="2" placeholder="Наприклад: На жаль, вхід неможливий. Пишіть адміну..."></textarea>
             </div>
-        </form>
-    </div>
 
-    <script src="admin.js"></script>
+            <div class="form-row-full" style="border-bottom:none;">
+                <span class="label-text">🕵️ Повідомлення при підозрі на твінка</span>
+                <div class="label-desc">Коли IP або аватар видають мультиакаунт</div>
+                <textarea id="decline-msg-twink" rows="2" placeholder="Наприклад: Виявлено підозрілу активність. Пишіть адміну..."></textarea>
+            </div>
+        </div>
+
+        <!-- Питання капчі -->
+        <div class="section">
+            <div class="section-title">❓ Питання Капчі</div>
+
+            <div class="form-row" style="margin-bottom:16px;">
+                <div class="form-row-label">
+                    <span class="label-text">Кількість питань за раз</span>
+                    <span class="label-desc">Скільки випадкових питань показувати (1 = одне)</span>
+                </div>
+                <div class="form-row-control">
+                    <input type="number" id="questions-count" min="1" max="10" value="1">
+                </div>
+            </div>
+
+            <div id="questions-list"></div>
+
+            <div class="add-question-btns">
+                <button type="button" class="btn btn-secondary" id="add-question">+ Текстове</button>
+                <button type="button" class="btn btn-secondary" id="add-choice-question">📋 З вибором</button>
+                <button type="button" class="btn btn-secondary" id="add-emoji-question">🎯 Emoji</button>
+            </div>
+        </div>
+
+        <div class="save-bar">
+            <button type="submit" class="btn btn-primary btn-full">💾 Зберегти налаштування</button>
+        </div>
+    </form>
+</div>
+
+<script src="admin.js"></script>
 </body>
 </html>
