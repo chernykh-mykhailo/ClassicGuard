@@ -9,23 +9,30 @@ WEBAPP_URL = os.getenv("WEBAPP_URL", "https://yourdomain.com")
 ADMIN_PASSWORD_HASH = os.getenv("ADMIN_PASSWORD_HASH", "")
 
 DEFAULT_SETTINGS = {
+    # Core behavior
     "action": "decline",  # 'decline', 'ban', or 'approve_log'
-    "guard_mode": True,   # If False, auto-approve all join requests
-    "check_device": True,
-    "check_ip": True,
-    "check_avatar": True,
-    "check_premium": True,
-    "check_language": True,
-    "log_languages": [],
-    "check_fingerprint": True,
-    "check_account_age": True,
-    "min_account_age_months": 3,
+    "guard_mode": True,
+    
+    # Essential checks (enabled by default)
+    "check_ip": True,           # Block same IP
+    "check_avatar": True,       # Require avatar
     "avatar_min_count": 1,
-    "questions_count": 1,  # How many random questions to ask per captcha
-    "check_osint": False,  # Enable OSINT checks via userbot
-    "osint_action": "log",  # 'log', 'block', 'approve_log'
-    "check_cas": False,  # Enable CAS (Combot Anti-Spam) check
-    "cas_action": "block",  # 'log', 'block', 'approve_log'
+    "check_fingerprint": True,  # Canvas/WebGL fingerprint
+    "check_account_age": True,  # Block young accounts
+    "min_account_age_months": 3,
+    "check_cas": True,          # CAS anti-spam (free, fast)
+    "cas_action": "block",
+    
+    # Optional checks (disabled by default)
+    "check_device": False,
+    "check_premium": False,
+    "check_language": False,
+    "log_languages": [],
+    "check_osint": False,       # Requires userbot setup
+    "osint_action": "log",
+    
+    # Questions
+    "questions_count": 1,
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",
     "decline_msg_captcha": "",  # Message when captcha failed

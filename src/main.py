@@ -320,6 +320,21 @@ async def verify_user(request: Request):
     chat_id = query_data["chat_id"]
     settings = database.get_chat_settings(chat_id)
 
+    def send_log(msg: str):
+        log_chan = settings.get("log_channel")
+        if log_chan:
+            bot_api.send_message(log_chan, msg)
+        else:
+            # Fallback: send to chat owner PM
+            try:
+                chat_info = bot_api.make_request("getChat", {"chat_id": chat_id})
+                if chat_info.get("ok"):
+                    owner_id = chat_info.get("result", {}).get("id")
+                    if owner_id:
+                        bot_api.send_message(owner_id, f"📋 <b>Лог ClassicGuard</b>\n{msg}")
+            except Exception as e:
+                logger.warning(f"Failed to send fallback log to owner: {e}")
+
     def do_decline():
         act = settings.get("action")
         if mode == "query":
@@ -402,13 +417,11 @@ async def verify_user(request: Request):
         else:
             status = "declined"
         database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
-        log_chan = settings.get("log_channel")
-        if log_chan:
-            if act == "approve_log":
-                action_ua = "✅ Прийнято (з логуванням)"
-            else:
-                action_ua = "Забанено" if act == "ban" else "Відхилено"
-            bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
+        if act == "approve_log":
+            action_ua = "✅ Прийнято (з логуванням)"
+        else:
+            action_ua = "Забанено" if act == "ban" else "Відхилено"
+        send_log(f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
         do_decline()
         if act != "approve_log":
             notify_declined("captcha")
@@ -425,13 +438,11 @@ async def verify_user(request: Request):
             else:
                 status = "declined_ip_match"
             database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
-            log_chan = settings.get("log_channel")
-            if log_chan:
-                if act == "approve_log":
-                    action_ua = "✅ Прийнято (з логуванням)"
-                else:
-                    action_ua = "Забанено" if act == "ban" else "Відхилено"
-                bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
+            if act == "approve_log":
+                action_ua = "✅ Прийнято (з логуванням)"
+            else:
+                action_ua = "Забанено" if act == "ban" else "Відхилено"
+            send_log(f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
             do_decline()
             if act != "approve_log":
                 notify_declined("twink")
@@ -459,7 +470,7 @@ async def verify_user(request: Request):
                             action_ua = "✅ Прийнято (з логуванням)"
                         else:
                             action_ua = "Забанено" if act == "ban" else "Відхилено"
-                        bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
+                        send_log(f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
                     do_decline()
                     if act != "approve_log":
                         notify_declined("twink")
@@ -519,13 +530,11 @@ async def verify_user(request: Request):
                 else:
                     status = "declined_young_account"
                 database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
-                log_chan = settings.get("log_channel")
-                if log_chan:
-                    if act == "approve_log":
-                        action_ua = "✅ Прийнято (з логуванням)"
-                    else:
-                        action_ua = "Забанено" if act == "ban" else "Відхилено"
-                    bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (Молодий акаунт)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Акаунту менше ніж {min_months} міс. (приблизно {approx_months} міс.).")
+                if act == "approve_log":
+                    action_ua = "✅ Прийнято (з логуванням)"
+                else:
+                    action_ua = "Забанено" if act == "ban" else "Відхилено"
+                send_log(f"❌ <b>Перевірку провалено (Молодий акаунт)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Акаунту менше ніж {min_months} міс. (приблизно {approx_months} міс.).")
                 do_decline()
                 if act != "approve_log":
                     notify_declined("twink")
@@ -559,9 +568,8 @@ async def verify_user(request: Request):
                 notify_declined("twink")
             return {"success": False, "reason": "Перевірку не пройдено."}
         else:
-            log_chan = settings.get("log_channel")
-            if log_chan and not cas_result.get("error"):
-                bot_api.send_message(log_chan, f"ℹ️ <b>CAS</b>: (ID: <code>{user_id}</code>). Чисто (не в базі CAS).")
+            if not cas_result.get("error"):
+                send_log(f"ℹ️ <b>CAS</b>: (ID: <code>{user_id}</code>). Чисто (не в базі CAS).")
 
     # 8. OSINT Check (via userbot)
     if settings.get("check_osint", False):
@@ -607,14 +615,26 @@ async def verify_user(request: Request):
                 notify_declined("twink")
             return {"success": False, "reason": "Перевірку не пройдено."}
         else:
-            log_chan = settings.get("log_channel")
-            if log_chan:
-                bot_api.send_message(log_chan, f"ℹ️ <b>OSINT</b>: (ID: <code>{user_id}</code>). Чисто (нема scam/fake).")
+            if not osint_result.get("error"):
+                send_log(f"ℹ️ <b>OSINT</b>: (ID: <code>{user_id}</code>). Чисто (нема scam/fake).")
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")
+    log_msg = f"✅ <b>Користувач схвалений</b> (ID: <code>{user_id}</code>).\nВсі перевірки пройдено успішно!"
+    
     if log_chan:
-        bot_api.send_message(log_chan, f"✅ <b>Користувач схвалений</b> (ID: <code>{user_id}</code>).\nВсі перевірки пройдено успішно!")
+        bot_api.send_message(log_chan, log_msg)
+    else:
+        # Fallback: send to chat owner PM
+        try:
+            chat_info = bot_api.make_request("getChat", {"chat_id": chat_id})
+            if chat_info.get("ok"):
+                owner_id = chat_info.get("result", {}).get("id")
+                if owner_id:
+                    bot_api.send_message(owner_id, f"📋 <b>Лог ClassicGuard</b>\n{log_msg}")
+        except Exception as e:
+            logger.warning(f"Failed to send fallback log to owner: {e}")
+    
     do_approve()
     return {"success": True}
 

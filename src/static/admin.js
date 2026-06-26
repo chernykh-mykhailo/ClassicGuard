@@ -82,6 +82,52 @@ document.addEventListener("DOMContentLoaded", () => {
         return [...checked, ...customLanguages];
     }
 
+    const PRESETS = {
+        simple: {
+            check_ip: true, check_avatar: true, avatar_min_count: 1,
+            check_fingerprint: true, check_account_age: true, min_account_age_months: 3,
+            check_cas: true, cas_action: "block",
+            check_device: false, check_premium: false, check_language: false,
+            check_osint: false, osint_action: "log"
+        },
+        balanced: {
+            check_ip: true, check_avatar: true, avatar_min_count: 1,
+            check_fingerprint: true, check_account_age: true, min_account_age_months: 3,
+            check_cas: true, cas_action: "block",
+            check_device: false, check_premium: false, check_language: false,
+            check_osint: false, osint_action: "log"
+        },
+        strict: {
+            check_ip: true, check_avatar: true, avatar_min_count: 1,
+            check_fingerprint: true, check_account_age: true, min_account_age_months: 6,
+            check_cas: true, cas_action: "block",
+            check_device: true, check_premium: true, check_language: true,
+            check_osint: false, osint_action: "log"
+        },
+        ultra: {
+            check_ip: true, check_avatar: true, avatar_min_count: 2,
+            check_fingerprint: true, check_account_age: true, min_account_age_months: 12,
+            check_cas: true, cas_action: "block",
+            check_device: true, check_premium: true, check_language: true,
+            check_osint: true, osint_action: "block"
+        }
+    };
+
+    function applyPreset(presetName) {
+        const preset = PRESETS[presetName];
+        if (!preset) return;
+        
+        Object.keys(preset).forEach(key => {
+            const el = document.getElementById(key);
+            if (!el) return;
+            if (el.type === "checkbox") {
+                el.checked = preset[key];
+            } else {
+                el.value = preset[key];
+            }
+        });
+    }
+
     function loadSettings(cid) {
         fetch(`/api/settings?chat_id=${cid}`)
             .then(res => res.json())
@@ -174,6 +220,41 @@ document.addEventListener("DOMContentLoaded", () => {
         item.querySelector(".remove-btn").addEventListener("click", () => item.remove());
         questionsList.appendChild(item);
     }
+
+    const presetSelect = document.getElementById("preset");
+    let currentPreset = "balanced";
+    
+    presetSelect.addEventListener("change", () => {
+        currentPreset = presetSelect.value;
+        applyPreset(presetSelect.value);
+    });
+    
+    // Track manual changes and switch to custom preset
+    const trackedInputs = [
+        "action", "guard-mode", "check-ip", "check-device", "check-avatar",
+        "avatar-min-count", "check-premium", "check-language", "check-fingerprint",
+        "check-account-age", "min-account-age-months", "check-cas", "cas-action",
+        "check-osint", "osint-action", "questions-count"
+    ];
+    
+    trackedInputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        
+        el.addEventListener("change", () => {
+            if (currentPreset !== "custom") {
+                currentPreset = "custom";
+                presetSelect.value = "custom";
+            }
+        });
+        
+        el.addEventListener("input", () => {
+            if (currentPreset !== "custom") {
+                currentPreset = "custom";
+                presetSelect.value = "custom";
+            }
+        });
+    });
 
     addQuestionBtn.addEventListener("click", () => renderQuestion());
     document.getElementById("add-choice-question").addEventListener("click", () => renderChoiceQuestion());

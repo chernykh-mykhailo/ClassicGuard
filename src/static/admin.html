@@ -142,21 +142,23 @@
         
         <form id="settings-form">
             <div class="section">
-                <h2>Захист чату</h2>
+                <h2>🎯 Режим захисту</h2>
                 <div class="form-group">
                     <div>
-                        <label for="guard-mode">Guard Mode</label>
-                        <div class="desc">Увімкнути капчу для нових учасників. Якщо вимкнено — всі запити автоматично схвалюються</div>
+                        <label for="preset">Швидкий preset</label>
+                        <div class="desc">Виберіть готовий набір налаштувань</div>
                     </div>
-                    <input type="checkbox" id="guard-mode" checked>
+                    <select id="preset" style="width: 200px;">
+                        <option value="custom">🔧 Користувацький</option>
+                        <option value="simple">😊 Простий (для куховарки)</option>
+                        <option value="balanced" selected>⚖️ Збалансований (рекомендовано)</option>
+                        <option value="strict">🔒 Строгий</option>
+                        <option value="ultra">💀 Ультра</option>
+                    </select>
                 </div>
-            </div>
-
-            <div class="section">
-                <h2>Дія при невдалій перевірці</h2>
                 <div class="form-group">
                     <div>
-                        <label for="action">Дія</label>
+                        <label for="action">Дія при невдалій перевірці</label>
                         <div class="desc">Що робити з користувачем, який не пройшов капчу/перевірку</div>
                     </div>
                     <select id="action">
@@ -168,7 +170,7 @@
             </div>
 
             <div class="section">
-                <h2>Перевірки на твінків</h2>
+                <h2>🛡️ Основні перевірки</h2>
                 
                 <div class="form-group">
                     <div>
