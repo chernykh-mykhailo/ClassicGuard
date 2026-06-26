@@ -14,6 +14,7 @@ services:
       - ./userbot_session:/app/userbot_session
 
   # One-time command to authenticate userbot (run once, then remove)
+  # This service has profile "auth" and won't start with regular "docker-compose up"
   auth-userbot:
     build: .
     container_name: classicguard-auth
@@ -23,3 +24,5 @@ services:
       - ./userbot_session:/app/userbot_session
     command: python auth_userbot.py
     restart: "no"
+    profiles:
+      - auth
