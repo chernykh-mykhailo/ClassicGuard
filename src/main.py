@@ -92,7 +92,7 @@ async def telegram_webhook(request: Request):
         message_thread_id = msg.get("message_thread_id")
         
         if chat.get("type") in ["group", "supergroup"]:
-            database.get_chat_settings(chat_id)
+            chat_settings = database.get_chat_settings(chat_id)
         
         # Support command matches even if they include bot username, e.g. /id@botname
         command = text.split("@")[0].split()[0] if text.startswith("/") else text
