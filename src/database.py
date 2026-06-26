@@ -35,6 +35,32 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        
+        # Global spammer database (shared across all chats)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS spammer_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                chat_id INTEGER NOT NULL,
+                banned_by INTEGER NOT NULL,
+                reason TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS confirmed_spammers (
+                user_id INTEGER PRIMARY KEY,
+                reason TEXT,
+                confirmed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_spammer_reports_user 
+            ON spammer_reports(user_id)
+        """)
+        
         conn.commit()
 
 def get_all_chats() -> list:
@@ -81,4 +107,73 @@ def log_verification_result(chat_id: int, user_id: int, ip: str, user_agent: str
             SET ip = ?, user_agent = ?, status = ?, answers = ?
             WHERE chat_id = ? AND user_id = ? AND status = 'pending'
         """, (ip, user_agent, status, json.dumps(answers, ensure_ascii=False), chat_id, user_id))
+        conn.commit()
+
+# Spammer database functions
+def report_spammer(user_id: int, chat_id: int, banned_by: int, reason: str = ""):
+    """Report a user as spammer from a specific chat"""
+    with get_db() as conn:
+        conn.execute("""
+            INSERT INTO spammer_reports (user_id, chat_id, banned_by, reason)
+            VALUES (?, ?, ?, ?)
+        """, (user_id, chat_id, banned_by, reason))
+        conn.commit()
+
+def check_spammer_status(user_id: int) -> dict:
+    """
+    Check if user is a confirmed spammer.
+    Returns dict with:
+      - is_confirmed: bool
+      - reason: str
+      - report_count: int
+      - unique_chats: int
+      - unique_reporters: int
+    """
+    with get_db() as conn:
+        # Check if already confirmed
+        confirmed = conn.execute(
+            "SELECT * FROM confirmed_spammers WHERE user_id = ?", (user_id,)
+        ).fetchone()
+        
+        if confirmed:
+            return {
+                "is_confirmed": True,
+                "reason": confirmed["reason"],
+                "confirmed_at": confirmed["confirmed_at"]
+            }
+        
+        # Count reports
+        reports = conn.execute(
+            "SELECT * FROM spammer_reports WHERE user_id = ?", (user_id,)
+        ).fetchall()
+        
+        report_count = len(reports)
+        unique_chats = len(set(r["chat_id"] for r in reports))
+        unique_reporters = len(set(r["banned_by"] for r in reports))
+        
+        # Smart logic to avoid false positives:
+        # - NOT 3+ bans in the SAME chat from different people
+        # - NOT 3+ bans from the SAME person in different chats
+        # Need: at least 3 reports from different chats AND different reporters
+        
+        is_confirmed = (
+            report_count >= 3 and
+            unique_chats >= 3 and
+            unique_reporters >= 3
+        )
+        
+        return {
+            "is_confirmed": is_confirmed,
+            "report_count": report_count,
+            "unique_chats": unique_chats,
+            "unique_reporters": unique_reporters
+        }
+
+def confirm_spammer(user_id: int, reason: str = ""):
+    """Mark user as confirmed spammer"""
+    with get_db() as conn:
+        conn.execute("""
+            INSERT OR IGNORE INTO confirmed_spammers (user_id, reason)
+            VALUES (?, ?)
+        """, (user_id, reason))
         conn.commit()

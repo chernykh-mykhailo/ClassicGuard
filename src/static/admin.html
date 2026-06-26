@@ -131,6 +131,10 @@
 <body>
     <div class="container">
         <h1>⚙️ Налаштування ClassicGuard</h1>
+        
+        <div style="margin-bottom: 20px;">
+            <a href="/static/spammer-db.html" style="color: var(--accent-color); text-decoration: none; font-size: 14px;">🌍 Відкрити базу спамерів</a>
+        </div>
 
         <div id="chat-selector-container" style="display:none; margin-bottom: 25px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); text-align: left;">
             <h2 style="font-size: 18px; margin-bottom: 15px; color: #b0b9c6;">Оберіть чат для налаштування</h2>
@@ -280,6 +284,22 @@
                         <option value="log">Тільки логувати</option>
                         <option value="approve_log">Прийняти, але логувати</option>
                     </select>
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <label for="check-global-spammer-db">🌍 Глобальна база спамерів</label>
+                        <div class="desc">Блокувати користувачів, яких забанили в 3+ різних чатах (захист від фолс-позитивів)</div>
+                    </div>
+                    <input type="checkbox" id="check-global-spammer-db">
+                </div>
+
+                <div class="form-group">
+                    <div>
+                        <label for="check-ban-commands">⚔️ Команди /ban</label>
+                        <div class="desc">Дозволити адмінам використовувати /ban переман та /ban спам для ручного звіту</div>
+                    </div>
+                    <input type="checkbox" id="check-ban-commands">
                 </div>
 
                 <div class="form-group">

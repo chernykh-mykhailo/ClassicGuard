@@ -145,6 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("min-account-age-months").value = data.min_account_age_months ?? 3;
                 document.getElementById("check-cas").checked = data.check_cas === true;
                 document.getElementById("cas-action").value = data.cas_action || "block";
+                document.getElementById("check-global-spammer-db").checked = data.check_global_spammer_db === true;
                 document.getElementById("check-osint").checked = data.check_osint === true;
                 document.getElementById("osint-action").value = data.osint_action || "log";
                 document.getElementById("questions-count").value = data.questions_count ?? 1;
@@ -234,7 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
         "action", "guard-mode", "check-ip", "check-device", "check-avatar",
         "avatar-min-count", "check-premium", "check-language", "check-fingerprint",
         "check-account-age", "min-account-age-months", "check-cas", "cas-action",
-        "check-osint", "osint-action", "questions-count"
+        "check-global-spammer-db", "check-ban-commands", "check-osint", "osint-action", "questions-count"
     ];
     
     trackedInputs.forEach(id => {
@@ -298,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
             min_account_age_months: parseInt(document.getElementById("min-account-age-months").value, 10),
             check_cas: document.getElementById("check-cas").checked,
             cas_action: document.getElementById("cas-action").value,
+            check_global_spammer_db: document.getElementById("check-global-spammer-db").checked,
             check_osint: document.getElementById("check-osint").checked,
             osint_action: document.getElementById("osint-action").value,
             questions_count: parseInt(document.getElementById("questions-count").value, 10),

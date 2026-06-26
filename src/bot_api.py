@@ -45,11 +45,14 @@ def decline_chat_join_request(chat_id: int, user_id: int):
         "user_id": user_id
     })
 
-def ban_chat_member(chat_id: int, user_id: int):
-    return make_request("banChatMember", {
+def ban_chat_member(chat_id: int, user_id: int, until_date: int = None):
+    params = {
         "chat_id": chat_id,
         "user_id": user_id
-    })
+    }
+    if until_date:
+        params["until_date"] = until_date
+    return make_request("banChatMember", params)
 
 def get_user_profile_photos(user_id: int, limit: int = 1):
     return make_request("getUserProfilePhotos", {"user_id": user_id, "limit": limit})

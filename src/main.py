@@ -3,6 +3,7 @@ import hmac
 import urllib.parse
 import logging
 import random
+from datetime import datetime
 from fastapi import FastAPI, Request, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -70,6 +71,8 @@ class SettingsModel(BaseModel):
     osint_action: str = "log"
     check_cas: bool = False
     cas_action: str = "block"
+    check_global_spammer_db: bool = False
+    check_ban_commands: bool = True
     log_channel: str
     contact_link: str = ""
     decline_msg_captcha: str = ""
@@ -177,6 +180,120 @@ async def telegram_webhook(request: Request):
                     ]
                 }
                 bot_api.send_message(chat_id, "Натисніть кнопку нижче, щоб налаштувати ботів для ваших чатів:", reply_markup=reply_markup)
+        
+        elif command == "/ban":
+            user_id = user.get("id")
+            if chat.get("type") not in ["group", "supergroup"]:
+                bot_api.send_message(chat_id, "⚠️ Команда /ban доступна лише в групах.")
+                return {"ok": True}
+            
+            # Check if user is admin
+            member_resp = bot_api.get_chat_member(chat_id, user_id)
+            status = member_resp.get("result", {}).get("status", "")
+            if status not in ["creator", "administrator"]:
+                bot_api.send_message(chat_id, "⚠️ Лише адміністратори можуть використовувати /ban")
+                return {"ok": True}
+            
+            # Check if ban commands are enabled in settings
+            chat_settings = database.get_chat_settings(chat_id)
+            if not chat_settings.get("check_ban_commands", True):
+                bot_api.send_message(chat_id, "⚠️ Команди /ban вимкнені в налаштуваннях цього чату.")
+                return {"ok": True}
+            
+            # Get target user from reply
+            reply_to = msg.get("reply_to_message")
+            if not reply_to:
+                bot_api.send_message(chat_id, "⚠️ Використання: /ban [переман|спам] [причина]\nАбо реплай на повідомлення користувача + /ban [переман|спам] [причина]")
+                return {"ok": True}
+            
+            target_user = reply_to.get("from", {})
+            target_id = target_user.get("id")
+            target_username = target_user.get("username", "") or target_user.get("first_name", "Unknown")
+            
+            # Parse command: /ban [time] [переман|спам] [reason...] OR /ban [переман|спам] [reason...]
+            # Time formats: 100 (days), 1m (minutes), 2h (hours), 7d (days)
+            args = text.split(maxsplit=1)  # Split into: ['/ban', 'rest...']
+            rest = args[1] if len(args) > 1 else ""
+            
+            # Parse time specification (optional)
+            until_date = None  # None = permanent ban
+            time_parts = rest.split(maxsplit=1)
+            time_str = time_parts[0]
+            
+            # Check if first part is a time specification
+            if time_str and not any(keyword in time_str.lower() for keyword in ["переман", "спам"]):
+                # Try to parse time
+                import re
+                match = re.match(r'^(\d+)([mhd]?)$', time_str, re.IGNORECASE)
+                if match:
+                    amount = int(match.group(1))
+                    unit = match.group(2).lower() if match.group(2) else 'd'  # Default to days
+                    
+                    # Calculate until_date (Unix timestamp)
+                    import time as time_module
+                    now = int(time_module.time())
+                    
+                    if unit == 'm':  # minutes
+                        until_date = now + (amount * 60)
+                    elif unit == 'h':  # hours
+                        until_date = now + (amount * 3600)
+                    elif unit == 'd':  # days
+                        until_date = now + (amount * 86400)
+                    else:  # no unit = days
+                        until_date = now + (amount * 86400)
+                    
+                    # Remove time from rest
+                    rest = time_parts[1] if len(time_parts) > 1 else ""
+            
+            # Check if remaining text contains переман or спам
+            reason_lower = rest.lower()
+            
+            if "переман" in reason_lower:
+                # Add to local spammer database
+                database.report_spammer(target_id, chat_id, user_id, f"переман: {rest}")
+                
+                # Ban with time
+                ban_result = bot_api.ban_chat_member(chat_id, target_id, until_date)
+                
+                if ban_result.get("ok"):
+                    if until_date:
+                        # Calculate duration for message
+                        import time as time_module
+                        duration_secs = until_date - int(time_module.time())
+                        days = duration_secs // 86400
+                        hours = (duration_secs % 86400) // 3600
+                        minutes = (duration_secs % 3600) // 60
+                        
+                        if days > 0:
+                            duration_str = f"{days} дн."
+                        elif hours > 0:
+                            duration_str = f"{hours} год."
+                        else:
+                            duration_str = f"{minutes} хв."
+                        
+                        bot_api.send_message(chat_id, f"✅ Користувача <b>{target_username}</b> (ID: <code>{target_id}</code>) забанено на {duration_str}.\n<b>Причина:</b> {rest}")
+                    else:
+                        bot_api.send_message(chat_id, f"✅ Користувача <b>{target_username}</b> (ID: <code>{target_id}</code>) забанено назавжди.\n<b>Причина:</b> {rest}")
+                else:
+                    bot_api.send_message(chat_id, f"❌ Помилка при бані користувача. Можливо, він вже забанений або не в чаті.")
+            
+            elif "спам" in reason_lower:
+                # Report to CAS (if available)
+                bot_api.send_message(chat_id, f"🔄 Звіт в CAS для <b>{target_username}</b> (ID: <code>{target_id}</code>)...\n<b>Причина:</b> {rest}")
+                
+                # Try to report via CAS (note: CAS doesn't have public report API, so we log it)
+                # In future, could integrate with SpamWatch or other services
+                cas_result = await userbot_module.cas_check(target_id)
+                if cas_result.get("is_banned"):
+                    bot_api.send_message(chat_id, f"ℹ️ Користувач вже є в базі CAS (ID: {cas_result.get('cas_id')})")
+                else:
+                    # Log as spam report locally
+                    database.report_spammer(target_id, chat_id, user_id, f"спам: {rest}")
+                    bot_api.send_message(chat_id, f"✅ Звіт збережено. Користувач не в базі CAS, але звіт записано в локальну базу.\n\n💡 Примітка: CAS не має публічного API для додавання. Для реального спам-репорту використовуйте @SpamBot або @SpamWatchBot.")
+            
+            else:
+                # No trigger word found
+                bot_api.send_message(chat_id, "⚠️ Не вказано тип звіту. Використовуйте:\n/ban [час] [переман|спам] [причина]\n\nПриклади:\n/ban 100 переман спам\n/ban 1m спам реклама\n/ban 2h переман обман\n/ban переман (назавжди)\n/ban спам (назавжди)")
 
     elif "chat_join_request" in data:
         req = data["chat_join_request"]
@@ -335,7 +452,7 @@ async def verify_user(request: Request):
             except Exception as e:
                 logger.warning(f"Failed to send fallback log to owner: {e}")
 
-    def do_decline():
+    def do_decline(reason: str = ""):
         act = settings.get("action")
         if mode == "query":
             if act == "approve_log":
@@ -345,6 +462,9 @@ async def verify_user(request: Request):
         else:
             if act == "ban":
                 bot_api.ban_chat_member(chat_id, user_id)
+                # Auto-report to spammer database
+                if settings.get("check_global_spammer_db", False):
+                    database.report_spammer(user_id, chat_id, user_id, f"Auto-banned: {reason}")
             elif act == "approve_log":
                 bot_api.approve_chat_join_request(chat_id, user_id)
             else:
@@ -542,6 +662,24 @@ async def verify_user(request: Request):
             if log_chan:
                 bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>: (ID: <code>{user_id}</code>). Приблизний вік: {approx_months} міс. ({approx_years} років).")
 
+    # 6.5. Global Spammer Database Check
+    if settings.get("check_global_spammer_db", False):
+        spammer_status = database.check_spammer_status(user_id)
+        if spammer_status.get("is_confirmed"):
+            act = settings.get("action")
+            if act == "approve_log":
+                status = "declined_but_approved_spammer"
+            elif act == "ban":
+                status = "banned_spammer"
+            else:
+                status = "declined_spammer"
+            database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
+            send_log(f"❌ <b>Перевірку провалено (Global Spammer DB)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {'Забанено' if act == 'ban' else 'Відхилено'}.\n<b>Причина:</b> Користувач в базі спамерів ({spammer_status.get('reason', 'N/A')}).")
+            do_decline()
+            if act != "approve_log":
+                notify_declined("twink")
+            return {"success": False, "reason": "Перевірку не пройдено."}
+
     # 7. CAS Check (Combot Anti-Spam)
     if settings.get("check_cas", False):
         cas_result = await userbot_module.cas_check(user_id)
@@ -663,6 +801,92 @@ async def get_admin_chats(user_id: int):
                 title = chat_resp.get("result", {}).get("title", f"Група {c_id}")
                 admin_chats.append({"id": c_id, "title": title})
     return {"chats": admin_chats}
+
+# Spammer database API
+@app.post("/api/spammer/report")
+async def report_spammer(user_id: int, chat_id: int, banned_by: int, reason: str = ""):
+    database.report_spammer(user_id, chat_id, banned_by, reason)
+    
+    # Check if should be confirmed
+    status = database.check_spammer_status(user_id)
+    if status.get("is_confirmed"):
+        database.confirm_spammer(user_id, f"Confirmed: {status['report_count']} reports from {status['unique_chats']} chats by {status['unique_reporters']} reporters")
+    
+    return {"success": True, "status": status}
+
+@app.get("/api/spammer/check")
+async def check_spammer(user_id: int):
+    status = database.check_spammer_status(user_id)
+    return status
+
+@app.get("/api/spammer/list")
+async def list_spammers():
+    with database.get_db() as conn:
+        rows = conn.execute("""
+            SELECT s.user_id, s.reason, s.confirmed_at, 
+                   COUNT(r.id) as report_count,
+                   COUNT(DISTINCT r.chat_id) as chat_count
+            FROM confirmed_spammers s
+            LEFT JOIN spammer_reports r ON s.user_id = r.user_id
+            GROUP BY s.user_id
+            ORDER BY s.confirmed_at DESC
+        """).fetchall()
+        return {"spammers": [dict(row) for row in rows]}
+
+@app.get("/api/spammer/reports")
+async def list_reports():
+    with database.get_db() as conn:
+        rows = conn.execute("""
+            SELECT * FROM spammer_reports 
+            ORDER BY timestamp DESC
+            LIMIT 1000
+        """).fetchall()
+        return {"reports": [dict(row) for row in rows]}
+
+@app.post("/api/spammer/confirm")
+async def confirm_spammer_api(user_id: int, reason: str = ""):
+    database.confirm_spammer(user_id, reason)
+    return {"success": True}
+
+@app.delete("/api/spammer/remove")
+async def remove_spammer(user_id: int):
+    with database.get_db() as conn:
+        conn.execute("DELETE FROM confirmed_spammers WHERE user_id = ?", (user_id,))
+        conn.execute("DELETE FROM spammer_reports WHERE user_id = ?", (user_id,))
+        conn.commit()
+    return {"success": True}
+
+@app.get("/api/spammer/export")
+async def export_spammer_db():
+    with database.get_db() as conn:
+        spammers = conn.execute("SELECT * FROM confirmed_spammers").fetchall()
+        reports = conn.execute("SELECT * FROM spammer_reports").fetchall()
+        return {
+            "spammers": [dict(row) for row in spammers],
+            "reports": [dict(row) for row in reports],
+            "exported_at": datetime.now().isoformat()
+        }
+
+@app.post("/api/spammer/import")
+async def import_spammer_db(data: dict):
+    spammers = data.get("spammers", [])
+    with database.get_db() as conn:
+        for s in spammers:
+            conn.execute("""
+                INSERT OR IGNORE INTO confirmed_spammers (user_id, reason, confirmed_at)
+                VALUES (?, ?, ?)
+            """, (s["user_id"], s.get("reason", ""), s.get("confirmed_at", datetime.now().isoformat())))
+        conn.commit()
+    return {"success": True, "imported": len(spammers)}
+
+@app.post("/api/spammer/sync-cas")
+async def sync_cas():
+    # CAS sync via userbot
+    from src import userbot as userbot_module
+    added = 0
+    # This is a placeholder - actual CAS sync would need implementation
+    # For now, return success
+    return {"success": True, "added": added}
 
 # Serve static directory
 static_dir = os.path.join(os.path.dirname(__file__), "static")
