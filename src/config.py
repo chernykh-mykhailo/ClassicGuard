@@ -14,6 +14,9 @@ DEFAULT_SETTINGS = {
     "check_device": True,
     "check_ip": True,
     "check_avatar": True,
+    "check_premium": True,
+    "check_language": True,
+    "check_fingerprint": True,
     "avatar_min_count": 1,
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",

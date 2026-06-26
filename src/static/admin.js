@@ -62,6 +62,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-device").checked = data.check_device;
                 document.getElementById("check-avatar").checked = data.check_avatar;
                 document.getElementById("avatar-min-count").value = data.avatar_min_count ?? 1;
+                document.getElementById("check-premium").checked = data.check_premium !== false;
+                document.getElementById("check-language").checked = data.check_language !== false;
+                document.getElementById("check-fingerprint").checked = data.check_fingerprint !== false;
                 document.getElementById("log-channel").value = data.log_channel || "";
                 document.getElementById("contact-link").value = data.contact_link || "";
                 document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
@@ -137,6 +140,9 @@ document.addEventListener("DOMContentLoaded", () => {
             check_device: document.getElementById("check-device").checked,
             check_avatar: document.getElementById("check-avatar").checked,
             avatar_min_count: parseInt(document.getElementById("avatar-min-count").value, 10),
+            check_premium: document.getElementById("check-premium").checked,
+            check_language: document.getElementById("check-language").checked,
+            check_fingerprint: document.getElementById("check-fingerprint").checked,
             log_channel: document.getElementById("log-channel").value.trim(),
             contact_link: document.getElementById("contact-link").value.trim(),
             decline_msg_captcha: document.getElementById("decline-msg-captcha").value.trim(),

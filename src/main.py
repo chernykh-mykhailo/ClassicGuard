@@ -57,6 +57,9 @@ class SettingsModel(BaseModel):
     check_device: bool
     check_ip: bool
     check_avatar: bool
+    check_premium: bool = True
+    check_language: bool = True
+    check_fingerprint: bool = True
     avatar_min_count: int = 1
     log_channel: str
     contact_link: str = ""
@@ -420,6 +423,36 @@ async def verify_user(request: Request):
                     if act != "approve_log":
                         notify_declined("twink")
                     return {"success": False, "reason": "Перевірку не пройдено."}
+
+    # 3. Collect fingerprint data (Premium, language, device fingerprint)
+    fingerprint = data.get("fingerprint", {})
+    is_premium = fingerprint.get("is_premium", False)
+    lang_code = fingerprint.get("language_code", "")
+    fp_canvas = fingerprint.get("canvas", "")
+    fp_webgl = fingerprint.get("webgl", "")
+    fp_screen = fingerprint.get("screen", "")
+    fp_timezone = fingerprint.get("timezone", "")
+    fp_platform = fingerprint.get("platform", "")
+
+    # Store fingerprint in query data for future cross-checking
+    query_data["fingerprint"] = {
+        "is_premium": is_premium,
+        "language_code": lang_code,
+        "canvas": fp_canvas,
+        "webgl": fp_webgl,
+        "screen": fp_screen,
+        "timezone": fp_timezone,
+        "platform": fp_platform,
+    }
+
+    # Log suspicious cases but don't block (too aggressive to block)
+    log_chan = settings.get("log_channel")
+    if log_chan and settings.get("check_premium", True):
+        if not is_premium:
+            bot_api.send_message(log_chan, f"ℹ️ <b>Без Premium</b>: (ID: <code>{user_id}</code>). Користувач без Telegram Premium.")
+    if log_chan and settings.get("check_language", True):
+        if lang_code and lang_code not in ["uk", "ru", "be", "en"]:
+            bot_api.send_message(log_chan, f"ℹ️ <b>Підозріла мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code}.")
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")
