@@ -100,7 +100,7 @@ async def telegram_webhook(request: Request):
         
         if command in ["/get_id", "/id"]:
             reply_to = msg.get("reply_to_message")
-            if reply_to:
+            if reply_to: 
                 replied_user = reply_to.get("from", {})
                 replied_id = replied_user.get("id")
                 username_str = f" (@{replied_user.get('username')})" if replied_user.get('username') else ""
@@ -396,6 +396,7 @@ async def telegram_webhook(request: Request):
             "user_id": user_id,
             "timestamp": time.time(),
             "user_name": username,
+            "raw_username": user.get("username", ""),  # @username without @
         }
         web_app_url = f"{config.WEBAPP_URL.rstrip('/')}/static/index.html?query_id={query_id}"
         result = bot_api.send_chat_join_request_web_app(query_id, web_app_url)
@@ -497,7 +498,15 @@ async def verify_user(request: Request):
 
     user_id = query_data["user_id"]
     chat_id = query_data["chat_id"]
+    raw_username = query_data.get("raw_username", "")
     settings = database.get_chat_settings(chat_id)
+
+    def fmt_user(uid: int, uname: str = "") -> str:
+        """Return @username or clickable tg://user link."""
+        if uname:
+            return f"@{uname} (ID: <code>{uid}</code>)"
+        return f"<a href='tg://user?id={uid}'>{uid}</a> (ID: <code>{uid}</code>)"
+
 
     def send_log(msg: str):
         log_chan = settings.get("log_channel")
@@ -603,7 +612,7 @@ async def verify_user(request: Request):
             action_ua = "✅ Прийнято (з логуванням)"
         else:
             action_ua = "Забанено" if act == "ban" else "Відхилено"
-        send_log(f"❌ <b>Перевірку провалено (Капча)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Неправильні відповіді на капчу.")
+        send_log(f"❌ <b>Перевірку провалено (Капча)</b>\n👤 {fmt_user(user_id, raw_username)}\n<b>Дія:</b> {action_ua}\n<b>Причина:</b> Неправильні відповіді на капчу.")
         do_decline()
         if act != "approve_log":
             notify_declined("captcha")
@@ -611,25 +620,35 @@ async def verify_user(request: Request):
 
     # 2. Check Twink / Alt account factors
     if settings["check_ip"]:
-        if client_ip in ip_history and ip_history[client_ip] != user_id:
-            act = settings.get("action")
-            if act == "approve_log":
-                status = "declined_but_approved_ip_match"
-            elif act == "ban":
-                status = "banned_ip_match"
-            else:
-                status = "declined_ip_match"
-            database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
-            if act == "approve_log":
-                action_ua = "✅ Прийнято (з логуванням)"
-            else:
-                action_ua = "Забанено" if act == "ban" else "Відхилено"
-            send_log(f"❌ <b>Перевірку провалено (Збіг IP)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Твінк (однаковий IP з іншим користувачем).")
-            do_decline()
-            if act != "approve_log":
-                notify_declined("twink")
-            return {"success": False, "reason": "Перевірку не пройдено."}
-        ip_history[client_ip] = user_id
+        if client_ip in ip_history:
+            existing = ip_history[client_ip]
+            existing_uid = existing["uid"]
+            existing_uname = existing.get("uname", "")
+            if existing_uid != user_id:
+                act = settings.get("action")
+                if act == "approve_log":
+                    status = "declined_but_approved_ip_match"
+                elif act == "ban":
+                    status = "banned_ip_match"
+                else:
+                    status = "declined_ip_match"
+                database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
+                if act == "approve_log":
+                    action_ua = "✅ Прийнято (з логуванням)"
+                else:
+                    action_ua = "Забанено" if act == "ban" else "Відхилено"
+                send_log(
+                    f"❌ <b>Перевірку провалено (Збіг IP)</b>\n"
+                    f"👤 {fmt_user(user_id, raw_username)}\n"
+                    f"<b>Дія:</b> {action_ua}\n"
+                    f"<b>Причина:</b> Той самий IP що і {fmt_user(existing_uid, existing_uname)}\n"
+                    f"<b>IP:</b> <code>{client_ip}</code>"
+                )
+                do_decline()
+                if act != "approve_log":
+                    notify_declined("twink")
+                return {"success": False, "reason": "Перевірку не пройдено."}
+        ip_history[client_ip] = {"uid": user_id, "uname": raw_username}
 
     if settings["check_avatar"]:
         min_count = settings.get("avatar_min_count", 1)
@@ -652,7 +671,12 @@ async def verify_user(request: Request):
                             action_ua = "✅ Прийнято (з логуванням)"
                         else:
                             action_ua = "Забанено" if act == "ban" else "Відхилено"
-                        send_log(f"❌ <b>Перевірку провалено (Без ави)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Відсутній аватар (підозра на твінк).")
+                        send_log(
+                            f"❌ <b>Перевірку провалено (Без аватара)</b>\n"
+                            f"👤 {fmt_user(user_id, raw_username)}\n"
+                            f"<b>Дія:</b> {action_ua}\n"
+                            f"<b>Причина:</b> Аватарів: 0 (мінімум: {min_count})."
+                        )
                     do_decline()
                     if act != "approve_log":
                         notify_declined("twink")
@@ -683,13 +707,13 @@ async def verify_user(request: Request):
     log_chan = settings.get("log_channel")
     if log_chan and settings.get("check_premium", True):
         if not is_premium:
-            bot_api.send_message(log_chan, f"ℹ️ <b>Без Premium</b>: (ID: <code>{user_id}</code>). Користувач без Telegram Premium.")
+            bot_api.send_message(log_chan, f"ℹ️ <b>Без Premium</b>\n👤 {fmt_user(user_id, raw_username)}\nКористувач без Telegram Premium.")
     if log_chan and settings.get("check_language", True):
         if lang_code and lang_code not in ["uk", "ru", "be", "en"]:
-            bot_api.send_message(log_chan, f"ℹ️ <b>Підозріла мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code}.")
+            bot_api.send_message(log_chan, f"ℹ️ <b>Підозріла мова</b>\n👤 {fmt_user(user_id, raw_username)}\nМова інтерфейсу: <b>{lang_code}</b>.")
         log_langs = settings.get("log_languages", [])
         if lang_code and lang_code in log_langs:
-            bot_api.send_message(log_chan, f"⚠️ <b>Цільова мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code} (в списку відстеження).")
+            bot_api.send_message(log_chan, f"⚠️ <b>Цільова мова</b>\n👤 {fmt_user(user_id, raw_username)}\nМова: <b>{lang_code}</b> (в списку відстеження).")
 
     # 6. Check Account Age (estimated from Telegram ID)
     if settings.get("check_account_age", True):
@@ -716,13 +740,18 @@ async def verify_user(request: Request):
                     action_ua = "✅ Прийнято (з логуванням)"
                 else:
                     action_ua = "Забанено" if act == "ban" else "Відхилено"
-                send_log(f"❌ <b>Перевірку провалено (Молодий акаунт)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Акаунту менше ніж {min_months} міс. (приблизно {approx_months} міс.).")
+                send_log(
+                    f"❌ <b>Перевірку провалено (Молодий акаунт)</b>\n"
+                    f"👤 {fmt_user(user_id, raw_username)}\n"
+                    f"<b>Дія:</b> {action_ua}\n"
+                    f"<b>Причина:</b> Вік ~{approx_months} міс. (мінімум: {min_months} міс.)."
+                )
                 do_decline()
                 if act != "approve_log":
                     notify_declined("twink")
                 return {"success": False, "reason": "Перевірку не пройдено."}
             if log_chan:
-                bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>: (ID: <code>{user_id}</code>). Приблизний вік: {approx_months} міс. ({approx_years} років).")
+                bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>\n👤 {fmt_user(user_id, raw_username)}\nПриблизний вік: <b>{approx_months} міс.</b> ({approx_years} р.).")
 
     # 6.5. Global Spammer Database Check
     if settings.get("check_global_spammer_db", False):
@@ -809,18 +838,27 @@ async def verify_user(request: Request):
                     action_ua = "Забанено"
                 else:
                     action_ua = "Відхилено"
-                bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (OSINT)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> {', '.join(osint_reasons)}.\n📊 <pre>{osint_result}</pre>")
+                bot_api.send_message(log_chan,
+                    f"❌ <b>Перевірку провалено (OSINT)</b>\n"
+                    f"👤 {fmt_user(user_id, raw_username)}\n"
+                    f"<b>Дія:</b> {action_ua}\n"
+                    f"<b>Причина:</b> {', '.join(osint_reasons)}"
+                )
             do_decline()
             if act != "approve_log":
                 notify_declined("twink")
             return {"success": False, "reason": "Перевірку не пройдено."}
         else:
             if not osint_result.get("error"):
-                send_log(f"ℹ️ <b>OSINT</b>: (ID: <code>{user_id}</code>). Чисто (нема scam/fake).")
+                send_log(f"ℹ️ <b>OSINT</b>\n👤 {fmt_user(user_id, raw_username)}\nЧисто (нема scam/fake).")
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")
-    log_msg = f"✅ <b>Користувач схвалений</b> (ID: <code>{user_id}</code>).\nВсі перевірки пройдено успішно!"
+    log_msg = (
+        f"✅ <b>Користувач схвалений</b>\n"
+        f"👤 {fmt_user(user_id, raw_username)}\n"
+        f"Всі перевірки пройдено успішно!"
+    )
     
     if log_chan:
         bot_api.send_message(log_chan, log_msg)
