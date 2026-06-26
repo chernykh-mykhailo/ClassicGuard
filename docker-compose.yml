@@ -11,3 +11,15 @@ services:
       - .env
     volumes:
       - ./data:/app/data
+      - ./userbot_session:/app/userbot_session
+
+  # One-time command to authenticate userbot (run once, then remove)
+  auth-userbot:
+    build: .
+    container_name: classicguard-auth
+    env_file:
+      - .env
+    volumes:
+      - ./userbot_session:/app/userbot_session
+    command: python auth_userbot.py
+    restart: "no"
