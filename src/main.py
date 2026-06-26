@@ -880,6 +880,38 @@ async def check_spammer(user_id: int):
     status = database.check_spammer_status(user_id)
     return status
 
+@app.get("/api/spammer/check-enhanced")
+async def check_spammer_enhanced(user_id: int):
+    """Enhanced check with detailed weight breakdown"""
+    status = database.check_spammer_status(user_id)
+    
+    # Get recent reports for details
+    with database.get_db() as conn:
+        reports = conn.execute("""
+            SELECT r.*, c.member_count, c.created_at as chat_created
+            FROM spammer_reports r
+            LEFT JOIN chats c ON r.chat_id = c.chat_id
+            WHERE r.user_id = ?
+            ORDER BY r.timestamp DESC
+            LIMIT 10
+        """, (user_id,)).fetchall()
+        
+        report_details = []
+        for r in reports:
+            chat_weight = database.get_chat_weight(r["chat_id"])
+            report_details.append({
+                "chat_id": r["chat_id"],
+                "reason": r["reason"],
+                "timestamp": r["timestamp"],
+                "chat_weight": chat_weight,
+                "member_count": r["member_count"]
+            })
+    
+    return {
+        **status,
+        "recent_reports": report_details
+    }
+
 @app.get("/api/spammer/list")
 async def list_spammers():
     with database.get_db() as conn:
