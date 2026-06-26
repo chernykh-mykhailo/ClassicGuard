@@ -90,7 +90,8 @@ async def telegram_webhook(request: Request):
         chat_id = chat.get("id")
         user = msg.get("from", {})
         message_thread_id = msg.get("message_thread_id")
-        
+        chat_settings = None  # always defined; set below for group/supergroup
+
         if chat.get("type") in ["group", "supergroup"]:
             chat_settings = database.get_chat_settings(chat_id)
         
@@ -331,7 +332,7 @@ async def telegram_webhook(request: Request):
                 bot_api.send_message(chat_id, "⚠️ Не вказано тип звіту. Використовуйте:\n/ban [час] [переман|спам] [причина]\n\nПриклади:\n/ban 100 переман спам\n/ban 1m спам реклама\n/ban 2h переман обман\n/ban переман (назавжди)\n/ban спам (назавжди)")
         
         # Passive ban monitoring - watch for other bots' ban commands
-        if chat_settings.get("passive_ban_monitoring", False):
+        if chat_settings and chat_settings.get("passive_ban_monitoring", False):
             # Check if message contains ban commands from other bots
             text_lower = text.lower()
             if any(keyword in text_lower for keyword in ["!ban", "/ban", "бан", "!бан"]):
