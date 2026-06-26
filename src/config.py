@@ -32,6 +32,7 @@ DEFAULT_SETTINGS = {
     "osint_action": "log",
     "check_global_spammer_db": False,  # Global spammer database (3+ bans from different chats)
     "check_ban_commands": True,  # Enable /ban commands for manual reporting
+    "passive_ban_monitoring": True,  # Monitor other bots' ban commands in chat
     
     # Questions
     "questions_count": 1,

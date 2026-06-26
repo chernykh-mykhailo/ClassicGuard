@@ -84,32 +84,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const PRESETS = {
         simple: {
-            check_ip: true, check_avatar: true, avatar_min_count: 1,
-            check_fingerprint: true, check_account_age: true, min_account_age_months: 3,
-            check_cas: true, cas_action: "block",
-            check_device: false, check_premium: false, check_language: false,
-            check_osint: false, osint_action: "log"
+            "guard-mode": true,
+            "action": "decline",
+            "check-ip": true, "check-avatar": true, "avatar-min-count": 1,
+            "check-fingerprint": true, "check-account-age": true, "min-account-age-months": 3,
+            "check-cas": true, "cas-action": "block",
+            "check-device": false, "check-premium": false, "check-language": false,
+            "check-osint": false, "osint-action": "log",
+            "check-ban-commands": true, "passive-ban-monitoring": true,
+            "check-global-spammer-db": false
         },
         balanced: {
-            check_ip: true, check_avatar: true, avatar_min_count: 1,
-            check_fingerprint: true, check_account_age: true, min_account_age_months: 3,
-            check_cas: true, cas_action: "block",
-            check_device: false, check_premium: false, check_language: false,
-            check_osint: false, osint_action: "log"
+            "guard-mode": true,
+            "action": "decline",
+            "check-ip": true, "check-avatar": true, "avatar-min-count": 1,
+            "check-fingerprint": true, "check-account-age": true, "min-account-age-months": 3,
+            "check-cas": true, "cas-action": "block",
+            "check-device": false, "check-premium": false, "check-language": false,
+            "check-osint": false, "osint-action": "log",
+            "check-ban-commands": true, "passive-ban-monitoring": true,
+            "check-global-spammer-db": false
         },
         strict: {
-            check_ip: true, check_avatar: true, avatar_min_count: 1,
-            check_fingerprint: true, check_account_age: true, min_account_age_months: 6,
-            check_cas: true, cas_action: "block",
-            check_device: true, check_premium: true, check_language: true,
-            check_osint: false, osint_action: "log"
+            "guard-mode": true,
+            "action": "decline",
+            "check-ip": true, "check-avatar": true, "avatar-min-count": 1,
+            "check-fingerprint": true, "check-account-age": true, "min-account-age-months": 6,
+            "check-cas": true, "cas-action": "block",
+            "check-device": true, "check-premium": true, "check-language": true,
+            "check-osint": false, "osint-action": "log",
+            "check-ban-commands": true, "passive-ban-monitoring": true,
+            "check-global-spammer-db": true
         },
         ultra: {
-            check_ip: true, check_avatar: true, avatar_min_count: 2,
-            check_fingerprint: true, check_account_age: true, min_account_age_months: 12,
-            check_cas: true, cas_action: "block",
-            check_device: true, check_premium: true, check_language: true,
-            check_osint: true, osint_action: "block"
+            "guard-mode": true,
+            "action": "ban",
+            "check-ip": true, "check-avatar": true, "avatar-min-count": 2,
+            "check-fingerprint": true, "check-account-age": true, "min-account-age-months": 12,
+            "check-cas": true, "cas-action": "block",
+            "check-device": true, "check-premium": true, "check-language": true,
+            "check-osint": true, "osint-action": "block",
+            "check-ban-commands": true, "passive-ban-monitoring": true,
+            "check-global-spammer-db": true
         }
     };
 
@@ -146,6 +162,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-cas").checked = data.check_cas === true;
                 document.getElementById("cas-action").value = data.cas_action || "block";
                 document.getElementById("check-global-spammer-db").checked = data.check_global_spammer_db === true;
+                document.getElementById("check-ban-commands").checked = data.check_ban_commands !== false;
+                document.getElementById("passive-ban-monitoring").checked = data.passive_ban_monitoring !== false;
                 document.getElementById("check-osint").checked = data.check_osint === true;
                 document.getElementById("osint-action").value = data.osint_action || "log";
                 document.getElementById("questions-count").value = data.questions_count ?? 1;
@@ -235,7 +253,8 @@ document.addEventListener("DOMContentLoaded", () => {
         "action", "guard-mode", "check-ip", "check-device", "check-avatar",
         "avatar-min-count", "check-premium", "check-language", "check-fingerprint",
         "check-account-age", "min-account-age-months", "check-cas", "cas-action",
-        "check-global-spammer-db", "check-ban-commands", "check-osint", "osint-action", "questions-count"
+        "check-global-spammer-db", "check-ban-commands", "passive-ban-monitoring",
+        "check-osint", "osint-action", "questions-count"
     ];
     
     trackedInputs.forEach(id => {
@@ -300,6 +319,8 @@ document.addEventListener("DOMContentLoaded", () => {
             check_cas: document.getElementById("check-cas").checked,
             cas_action: document.getElementById("cas-action").value,
             check_global_spammer_db: document.getElementById("check-global-spammer-db").checked,
+            check_ban_commands: document.getElementById("check-ban-commands").checked,
+            passive_ban_monitoring: document.getElementById("passive-ban-monitoring").checked,
             check_osint: document.getElementById("check-osint").checked,
             osint_action: document.getElementById("osint-action").value,
             questions_count: parseInt(document.getElementById("questions-count").value, 10),

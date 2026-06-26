@@ -294,6 +294,32 @@ async def telegram_webhook(request: Request):
             else:
                 # No trigger word found
                 bot_api.send_message(chat_id, "⚠️ Не вказано тип звіту. Використовуйте:\n/ban [час] [переман|спам] [причина]\n\nПриклади:\n/ban 100 переман спам\n/ban 1m спам реклама\n/ban 2h переман обман\n/ban переман (назавжди)\n/ban спам (назавжди)")
+        
+        # Passive ban monitoring - watch for other bots' ban commands
+        if chat_settings.get("passive_ban_monitoring", False):
+            # Check if message contains ban commands from other bots
+            text_lower = text.lower()
+            if any(keyword in text_lower for keyword in ["!ban", "/ban", "бан", "!бан"]):
+                # Check if this is a reply to a user
+                reply_to = msg.get("reply_to_message")
+                if reply_to:
+                    target_user = reply_to.get("from", {})
+                    target_id = target_user.get("id")
+                    
+                    # Don't process if it's our own command (already handled above)
+                    if user_id != target_id:
+                        # Extract reason (everything after the command)
+                        import re
+                        # Remove command part
+                        reason_text = re.sub(r'^(!ban|/ban|бан|!бан)\s*', '', text, flags=re.IGNORECASE).strip()
+                        
+                        # Check for trigger words
+                        if "переман" in reason_text.lower():
+                            database.report_spammer(target_id, chat_id, user_id, f"passive_переман: {reason_text}")
+                            logger.info(f"Passive monitoring: detected переман for user {target_id} in chat {chat_id}")
+                        elif "спам" in reason_text.lower():
+                            database.report_spammer(target_id, chat_id, user_id, f"passive_спам: {reason_text}")
+                            logger.info(f"Passive monitoring: detected спам for user {target_id} in chat {chat_id}")
 
     elif "chat_join_request" in data:
         req = data["chat_join_request"]
