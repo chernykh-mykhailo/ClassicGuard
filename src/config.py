@@ -24,6 +24,8 @@ DEFAULT_SETTINGS = {
     "questions_count": 1,  # How many random questions to ask per captcha
     "check_osint": False,  # Enable OSINT checks via userbot
     "osint_action": "log",  # 'log', 'block', 'approve_log'
+    "check_cas": False,  # Enable CAS (Combot Anti-Spam) check
+    "cas_action": "block",  # 'log', 'block', 'approve_log'
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",
     "decline_msg_captcha": "",  # Message when captcha failed

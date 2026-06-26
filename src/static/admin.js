@@ -97,6 +97,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-fingerprint").checked = data.check_fingerprint !== false;
                 document.getElementById("check-account-age").checked = data.check_account_age !== false;
                 document.getElementById("min-account-age-months").value = data.min_account_age_months ?? 3;
+                document.getElementById("check-cas").checked = data.check_cas === true;
+                document.getElementById("cas-action").value = data.cas_action || "block";
                 document.getElementById("check-osint").checked = data.check_osint === true;
                 document.getElementById("osint-action").value = data.osint_action || "log";
                 document.getElementById("questions-count").value = data.questions_count ?? 1;
@@ -213,6 +215,8 @@ document.addEventListener("DOMContentLoaded", () => {
             check_fingerprint: document.getElementById("check-fingerprint").checked,
             check_account_age: document.getElementById("check-account-age").checked,
             min_account_age_months: parseInt(document.getElementById("min-account-age-months").value, 10),
+            check_cas: document.getElementById("check-cas").checked,
+            cas_action: document.getElementById("cas-action").value,
             check_osint: document.getElementById("check-osint").checked,
             osint_action: document.getElementById("osint-action").value,
             questions_count: parseInt(document.getElementById("questions-count").value, 10),

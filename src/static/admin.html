@@ -263,6 +263,25 @@
 
                 <div class="form-group">
                     <div>
+                        <label for="check-cas">🛡️ CAS (Combot Anti-Spam)</label>
+                        <div class="desc">Перевірка користувача в базі спам-заблокованих CAS</div>
+                    </div>
+                    <input type="checkbox" id="check-cas">
+                </div>
+                <div class="form-group">
+                    <div>
+                        <label for="cas-action">Дія при CAS-блокі</label>
+                        <div class="desc">Що робити, якщо користувач є в базі CAS</div>
+                    </div>
+                    <select id="cas-action">
+                        <option value="block">Забанити</option>
+                        <option value="log">Тільки логувати</option>
+                        <option value="approve_log">Прийняти, але логувати</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <div>
                         <label for="check-osint">🔍 OSINT перевірка</label>
                         <div class="desc">Повна інформація про профіль через юзер-бот (місяць реєстрації, країна, scam-позначки)</div>
                     </div>

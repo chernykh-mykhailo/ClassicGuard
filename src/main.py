@@ -68,6 +68,8 @@ class SettingsModel(BaseModel):
     questions_count: int = 1
     check_osint: bool = False
     osint_action: str = "log"
+    check_cas: bool = False
+    cas_action: str = "block"
     log_channel: str
     contact_link: str = ""
     decline_msg_captcha: str = ""
@@ -531,7 +533,37 @@ async def verify_user(request: Request):
             if log_chan:
                 bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>: (ID: <code>{user_id}</code>). Приблизний вік: {approx_months} міс. ({approx_years} років).")
 
-    # 7. OSINT Check (via userbot)
+    # 7. CAS Check (Combot Anti-Spam)
+    if settings.get("check_cas", False):
+        cas_result = await userbot_module.cas_check(user_id)
+        if cas_result.get("is_banned"):
+            act = settings.get("cas_action", "block")
+            if act == "block":
+                status = "banned_cas"
+            elif act == "approve_log":
+                status = "declined_but_approved_cas"
+            else:
+                status = "declined_cas"
+            database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
+            log_chan = settings.get("log_channel")
+            if log_chan:
+                if act == "approve_log":
+                    action_ua = "✅ Прийнято (з логуванням)"
+                elif act == "block":
+                    action_ua = "Забанено"
+                else:
+                    action_ua = "Відхилено"
+                bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (CAS)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> Знайдено в базі CAS (Combot Anti-Spam).\n📋 Reason: {cas_result.get('reason', 'N/A')}\n🆔 CAS ID: {cas_result.get('cas_id', 'N/A')}")
+            do_decline()
+            if act != "approve_log":
+                notify_declined("twink")
+            return {"success": False, "reason": "Перевірку не пройдено."}
+        else:
+            log_chan = settings.get("log_channel")
+            if log_chan and not cas_result.get("error"):
+                bot_api.send_message(log_chan, f"ℹ️ <b>CAS</b>: (ID: <code>{user_id}</code>). Чисто (не в базі CAS).")
+
+    # 8. OSINT Check (via userbot)
     if settings.get("check_osint", False):
         osint_result = await userbot_module.osint_lookup(user_id)
         osint_flagged = False

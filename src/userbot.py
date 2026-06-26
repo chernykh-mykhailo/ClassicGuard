@@ -1,10 +1,12 @@
 """
 OSINT userbot via Telethon (MTProto).
 Collects hidden profile metadata: registration month, country, scam flags.
+Also includes CAS (Combot Anti-Spam) check via public API.
 """
 import os
 import asyncio
 import logging
+import aiohttp
 from telethon import TelegramClient, functions, types
 from telethon.errors import SessionPasswordNeededError, FloodWaitError
 from typing import Optional, Dict, Any
@@ -158,6 +160,41 @@ async def osint_lookup(user_id: int) -> Dict[str, Any]:
         return {"error": "flood_wait", "wait_seconds": getattr(e, "seconds", 60)}
     except Exception as e:
         logger.error(f"OSINT lookup error for {user_id}: {e}")
+        return {"error": str(e)}
+
+
+async def cas_check(user_id: int) -> Dict[str, Any]:
+    """
+    Check user against CAS (Combot Anti-Spam) database.
+    Returns dict with:
+      - is_banned: bool
+      - reason: str (if banned)
+    """
+    cache_key = f"cas_{user_id}"
+    now = time.time()
+    cached = osint_cache.get(cache_key)
+    if cached and (now - cached.get("ts", 0)) < CACHE_TTL:
+        return cached.get("data", {})
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            url = f"https://api.cas.chat/check?user_id={user_id}"
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    result = {
+                        "is_banned": data.get("ok", False),
+                        "reason": data.get("reason", ""),
+                        "cas_id": data.get("id", None),
+                    }
+                    osint_cache[cache_key] = {"ts": now, "data": result}
+                    return result
+                else:
+                    return {"error": f"CAS API returned {resp.status}"}
+    except asyncio.TimeoutError:
+        return {"error": "CAS API timeout"}
+    except Exception as e:
+        logger.error(f"CAS check error for {user_id}: {e}")
         return {"error": str(e)}
 
 
