@@ -1,6 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
     const tg = window.Telegram.WebApp;
-    tg.expand();
+    
+    // Expand to full width on desktop, keep mobile behavior
+    if (window.innerWidth >= 768) {
+        tg.expand();
+        // Set max width to viewport width on desktop
+        document.body.style.maxWidth = window.innerWidth + 'px';
+    } else {
+        tg.expand();
+    }
 
     const urlParams = new URLSearchParams(window.location.search);
     const chatId = urlParams.get("chat_id") || "0";
