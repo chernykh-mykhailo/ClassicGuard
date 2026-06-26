@@ -45,12 +45,21 @@ document.addEventListener("DOMContentLoaded", () => {
                 selectorContainer.style.display = "none";
                 form.style.display = "block";
                 loadSettings(activeChatId);
+                updateSpammerLink(activeChatId);
             } else {
                 alert("Будь ласка, оберіть дійсний чат.");
             }
         });
     } else {
         loadSettings(activeChatId);
+        updateSpammerLink(activeChatId);
+    }
+
+    function updateSpammerLink(cid) {
+        const link = document.getElementById('spammer-db-link');
+        if (link && cid && cid !== '0') {
+            link.href = `/static/spammer-db.html?chat_id=${cid}`;
+        }
     }
 
     // ─── Custom language tags ─────────────────────────────────────────
