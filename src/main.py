@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 from src import config
 from src import bot_api
 from src import database
+from src import userbot as userbot_module
 
 app = FastAPI()
 
@@ -65,6 +66,8 @@ class SettingsModel(BaseModel):
     min_account_age_months: int = 3
     avatar_min_count: int = 1
     questions_count: int = 1
+    check_osint: bool = False
+    osint_action: str = "log"
     log_channel: str
     contact_link: str = ""
     decline_msg_captcha: str = ""
@@ -527,6 +530,54 @@ async def verify_user(request: Request):
                 return {"success": False, "reason": "Перевірку не пройдено."}
             if log_chan:
                 bot_api.send_message(log_chan, f"ℹ️ <b>Вік акаунта</b>: (ID: <code>{user_id}</code>). Приблизний вік: {approx_months} міс. ({approx_years} років).")
+
+    # 7. OSINT Check (via userbot)
+    if settings.get("check_osint", False):
+        osint_result = await userbot_module.osint_lookup(user_id)
+        osint_flagged = False
+        osint_reasons = []
+
+        if osint_result.get("is_scam"):
+            osint_flagged = True
+            osint_reasons.append("Scam-позначка")
+        if osint_result.get("is_fake"):
+            osint_flagged = True
+            osint_reasons.append("Fake-позначка")
+
+        # Avatar spam detection
+        avatar_spam_score = osint_result.get("avatar_spam_score", 0)
+        avatar_count = osint_result.get("avatar_count", 0)
+        avatar_dates = osint_result.get("avatar_dates", [])
+        if avatar_spam_score >= 5:
+            osint_flagged = True
+            osint_reasons.append(f"Підозріла історія аватарок (score={avatar_spam_score}, count={avatar_count})")
+
+        if osint_flagged:
+            act = settings.get("osint_action", "log")
+            if act == "block":
+                status = "banned_osint"
+            elif act == "approve_log":
+                status = "declined_but_approved_osint"
+            else:
+                status = "declined_osint"
+            database.log_verification_result(chat_id, user_id, client_ip, device_info, status, answers)
+            log_chan = settings.get("log_channel")
+            if log_chan:
+                if act == "approve_log":
+                    action_ua = "✅ Прийнято (з логуванням)"
+                elif act == "block":
+                    action_ua = "Забанено"
+                else:
+                    action_ua = "Відхилено"
+                bot_api.send_message(log_chan, f"❌ <b>Перевірку провалено (OSINT)</b>: (ID: <code>{user_id}</code>).\n<b>Дія:</b> {action_ua}.\n<b>Причина:</b> {', '.join(osint_reasons)}.\n📊 <pre>{osint_result}</pre>")
+            do_decline()
+            if act != "approve_log":
+                notify_declined("twink")
+            return {"success": False, "reason": "Перевірку не пройдено."}
+        else:
+            log_chan = settings.get("log_channel")
+            if log_chan:
+                bot_api.send_message(log_chan, f"ℹ️ <b>OSINT</b>: (ID: <code>{user_id}</code>). Чисто (нема scam/fake).")
 
     database.log_verification_result(chat_id, user_id, client_ip, device_info, "approved", answers)
     log_chan = settings.get("log_channel")

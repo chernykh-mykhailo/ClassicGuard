@@ -22,6 +22,8 @@ DEFAULT_SETTINGS = {
     "min_account_age_months": 3,
     "avatar_min_count": 1,
     "questions_count": 1,  # How many random questions to ask per captcha
+    "check_osint": False,  # Enable OSINT checks via userbot
+    "osint_action": "log",  # 'log', 'block', 'approve_log'
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",
     "decline_msg_captcha": "",  # Message when captcha failed
