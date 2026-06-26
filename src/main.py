@@ -200,18 +200,21 @@ async def telegram_webhook(request: Request):
                 bot_api.send_message(chat_id, "⚠️ Команди /ban вимкнені в налаштуваннях цього чату.")
                 return {"ok": True}
             
-            # Get target user from reply
+            # Parse command: /ban [time] [@username|user_id] [переман|спам] [reason...]
+            # OR /ban [time] [переман|спам] [reason...] (with reply)
+            # OR /ban [переман|спам] [reason...] (with reply, no time)
+            
+            # Try to extract user from reply first
             reply_to = msg.get("reply_to_message")
-            if not reply_to:
-                bot_api.send_message(chat_id, "⚠️ Використання: /ban [переман|спам] [причина]\nАбо реплай на повідомлення користувача + /ban [переман|спам] [причина]")
-                return {"ok": True}
+            target_id = None
+            target_username = "Unknown"
             
-            target_user = reply_to.get("from", {})
-            target_id = target_user.get("id")
-            target_username = target_user.get("username", "") or target_user.get("first_name", "Unknown")
+            if reply_to:
+                target_user = reply_to.get("from", {})
+                target_id = target_user.get("id")
+                target_username = target_user.get("username", "") or target_user.get("first_name", "Unknown")
             
-            # Parse command: /ban [time] [переман|спам] [reason...] OR /ban [переман|спам] [reason...]
-            # Time formats: 100 (days), 1m (minutes), 2h (hours), 7d (days)
+            # Parse command parts
             args = text.split(maxsplit=1)  # Split into: ['/ban', 'rest...']
             rest = args[1] if len(args) > 1 else ""
             
@@ -221,7 +224,7 @@ async def telegram_webhook(request: Request):
             time_str = time_parts[0]
             
             # Check if first part is a time specification
-            if time_str and not any(keyword in time_str.lower() for keyword in ["переман", "спам"]):
+            if time_str and not any(keyword in time_str.lower() for keyword in ["переман", "спам"]) and not time_str.startswith("@"):
                 # Try to parse time
                 import re
                 match = re.match(r'^(\d+)([mhd]?)$', time_str, re.IGNORECASE)
@@ -244,6 +247,38 @@ async def telegram_webhook(request: Request):
                     
                     # Remove time from rest
                     rest = time_parts[1] if len(time_parts) > 1 else ""
+            
+            # If no reply, try to extract user from command arguments
+            if not target_id:
+                parts = rest.split(maxsplit=1)
+                user_arg = parts[0] if parts else ""
+                remaining = parts[1] if len(parts) > 1 else ""
+                
+                if user_arg.startswith("@"):
+                    # Username provided
+                    target_username = user_arg
+                    # Try to get user ID from username
+                    try:
+                        user_resp = bot_api.make_request("getChat", {"chat_id": user_arg})
+                        if user_resp.get("ok"):
+                            target_id = user_resp.get("result", {}).get("id")
+                    except:
+                        pass
+                    
+                    if not target_id:
+                        bot_api.send_message(chat_id, f"⚠️ Не вдалося знайти користувача {user_arg}. Можливо, він не починав діалог з ботом.\nВикористовуйте реплай на повідомлення користувача або вкажіть user_id.")
+                        return {"ok": True}
+                    
+                    rest = remaining
+                elif user_arg.isdigit():
+                    # User ID provided
+                    target_id = int(user_arg)
+                    target_username = f"ID:{target_id}"
+                    rest = remaining
+                else:
+                    # No user specified and no reply
+                    bot_api.send_message(chat_id, "⚠️ Використання:\n/ban [час] [@username|user_id] [переман|спам] [причина]\n/ban [час] [переман|спам] [причина] (з реплаєм)\n\nПриклади:\n/ban 100 @spammer переман спам\n/ban 123456789 спам\n/ban переман (реплай)")
+                    return {"ok": True}
             
             # Check if remaining text contains переман or спам
             reason_lower = rest.lower()
