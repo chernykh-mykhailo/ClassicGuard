@@ -64,6 +64,7 @@ class SettingsModel(BaseModel):
     check_account_age: bool = True
     min_account_age_months: int = 3
     avatar_min_count: int = 1
+    questions_count: int = 1
     log_channel: str
     contact_link: str = ""
     decline_msg_captcha: str = ""
@@ -237,31 +238,59 @@ async def get_questions(query_id: str = None, session: str = None):
     if not all_qs:
         raise HTTPException(status_code=404, detail="No questions configured")
 
-    # Вибираємо одне випадкове питання
-    chosen_idx = random.randrange(len(all_qs))
-    chosen = all_qs[chosen_idx]
+    questions_count = settings.get("questions_count", 1)
+    if questions_count < 1:
+        questions_count = 1
+    if questions_count > len(all_qs):
+        questions_count = len(all_qs)
 
-    if chosen.get("type") == "emoji":
-        correct_emoji = chosen["correct"]
-        distractors = list(chosen.get("distractors", []))
-        # Build full emoji list: correct + distractors, then shuffle
-        all_emojis = [correct_emoji] + distractors
-        random.shuffle(all_emojis)
-        correct_pos = all_emojis.index(correct_emoji)
+    # Pick random questions without duplicates
+    chosen_indices = random.sample(range(len(all_qs)), questions_count)
+    result_questions = []
+    store = active_queries if query_id else fallback_queries
+    key = query_id if query_id else session
 
-        # Store correct position in session
-        store = active_queries if query_id else fallback_queries
-        key = query_id if query_id else session
-        store[key]["emoji_correct"] = {str(chosen_idx): correct_pos}
+    for chosen_idx in chosen_indices:
+        chosen = all_qs[chosen_idx]
 
-        return {"questions": [{
-            "id": chosen_idx,
-            "type": "emoji",
-            "q": chosen["q"],
-            "emojis": all_emojis
-        }]}
-    else:
-        return {"questions": [{"id": chosen_idx, "q": chosen["q"], "type": "text"}]}
+        if chosen.get("type") == "emoji":
+            correct_emoji = chosen["correct"]
+            distractors = list(chosen.get("distractors", []))
+            all_emojis = [correct_emoji] + distractors
+            random.shuffle(all_emojis)
+            correct_pos = all_emojis.index(correct_emoji)
+
+            if "emoji_correct" not in store[key]:
+                store[key]["emoji_correct"] = {}
+            store[key]["emoji_correct"][str(chosen_idx)] = correct_pos
+
+            result_questions.append({
+                "id": chosen_idx,
+                "type": "emoji",
+                "q": chosen["q"],
+                "emojis": all_emojis
+            })
+        else:
+            choices = chosen.get("choices", [])
+            if choices:
+                # Multiple choice question — shuffle choices
+                shuffled = list(choices)
+                random.shuffle(shuffled)
+                result_questions.append({
+                    "id": chosen_idx,
+                    "type": "choice",
+                    "q": chosen["q"],
+                    "choices": shuffled
+                })
+            else:
+                # Free text input
+                result_questions.append({
+                    "id": chosen_idx,
+                    "q": chosen["q"],
+                    "type": "text"
+                })
+
+    return {"questions": result_questions}
 
 @app.post("/api/verify")
 async def verify_user(request: Request):
@@ -332,24 +361,28 @@ async def verify_user(request: Request):
     correct_count = 0
     checked = 0
 
-    for q_idx_str, correct_pos in emoji_correct.items():
-        # Emoji question — check selected index
-        user_sel = answers.get(q_idx_str)
-        checked += 1
-        if user_sel is not None and int(user_sel) == correct_pos:
-            correct_count += 1
-
     all_qs = settings.get("questions", [])
     for idx, q_data in enumerate(all_qs):
         idx_str = str(idx)
-        if idx_str in emoji_correct:
-            continue  # already checked above
         if idx_str not in answers:
             continue  # question not shown this session
         checked += 1
-        if q_data.get("type") == "emoji":
-            pass  # handled above
+
+        q_type = q_data.get("type", "text")
+
+        if q_type == "emoji":
+            correct_pos = emoji_correct.get(idx_str)
+            user_sel = answers.get(idx_str)
+            if correct_pos is not None and user_sel is not None and int(user_sel) == int(correct_pos):
+                correct_count += 1
+        elif q_type == "choice":
+            # Multiple choice — answer is the selected choice text
+            user_ans = str(answers.get(idx_str, "")).strip().lower()
+            correct_options = [str(a).lower().strip() for a in q_data.get("a", [])]
+            if any(opt in user_ans for opt in correct_options):
+                correct_count += 1
         else:
+            # Free text input
             user_ans = str(answers.get(idx_str, "")).strip().lower()
             correct_options = [str(a).lower().strip() for a in q_data.get("a", [])]
             if any(opt in user_ans for opt in correct_options):

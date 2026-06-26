@@ -290,9 +290,17 @@
 
             <div class="section">
                 <h2>Питання Капчі</h2>
+                <div class="form-group">
+                    <div>
+                        <label for="questions-count">Кількість питань за раз</label>
+                        <div class="desc">Скільки випадкових питань показувати за один раз (1 = одне випадкове)</div>
+                    </div>
+                    <input type="number" id="questions-count" min="1" max="10" value="1" style="width: 60px;">
+                </div>
                 <div id="questions-list"></div>
                 <div style="display:flex; gap:10px; margin-top:10px;">
                     <button type="button" class="btn-secondary" id="add-question" style="flex:1;">+ Текстове питання</button>
+                    <button type="button" class="btn-secondary" id="add-choice-question" style="flex:1;">📋 Питання з вибором</button>
                     <button type="button" class="btn-secondary" id="add-emoji-question" style="flex:1;">🎯 Emoji питання</button>
                 </div>
             </div>

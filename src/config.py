@@ -21,14 +21,19 @@ DEFAULT_SETTINGS = {
     "check_account_age": True,
     "min_account_age_months": 3,
     "avatar_min_count": 1,
+    "questions_count": 1,  # How many random questions to ask per captcha
     "log_channel": "",    # ID of the channel for logs
     "contact_link": "",
     "decline_msg_captcha": "",  # Message when captcha failed
     "decline_msg_twink": "",   # Message when suspected twink (IP/avatar)
     "questions": [
         {"type": "emoji", "q": "Де паляниця? 🧐", "correct": "🫓", "distractors": ["🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓", "🍓"]},
-        {"q": "Чий Крим?", "a": ["український", "україна", "україни"]},
-        {"q": "Батько наш - ...?", "a": ["бандера"]},
-        {"q": "Україна - це ...?", "a": ["європа", "понад усе"]}
+        {"type": "text", "q": "Чий Крим?", "a": ["український", "україна", "україни"], "choices": ["Україна", "Росія", "Нічий", "Спірний"]},
+        {"type": "text", "q": "Батько наш - ...?", "a": ["бандера"], "choices": ["Бандера", "Шевченко", "Франко", "Мазепа"]},
+        {"type": "text", "q": "Україна - це ...?", "a": ["європа", "понад усе"]},
+        {"type": "text", "q": "Столиця України?", "a": ["київ", "kyiv"], "choices": ["Київ", "Москва", "Мінськ", "Варшава"]},
+        {"type": "text", "q": "Якою мовою розмовляють в Україні?", "a": ["українською", "українська"]},
+        {"type": "emoji", "q": "Яка тварина символ України? 🐺", "correct": "🐺", "distractors": ["🦊", "🐻", "🐗", "🦌", "🦅", "🐱", "🐶", "🐰"]},
+        {"type": "text", "q": "Якого кольору прапор України?", "a": ["синьо-жовтий", "синій і жовтий", "blue and yellow", "жовто-блакитний"], "choices": ["Синьо-жовтий", "Червоно-чорний", "Біло-червоний", "Зелено-жовтий"]},
     ]
 }

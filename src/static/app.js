@@ -24,6 +24,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 data.questions.forEach((q) => {
                     if (q.type === "emoji") {
                         renderEmojiQuestion(q);
+                    } else if (q.type === "choice") {
+                        renderChoiceQuestion(q);
                     } else {
                         renderTextQuestion(q);
                     }
@@ -43,6 +45,34 @@ document.addEventListener("DOMContentLoaded", () => {
             <label for="q-${q.id}">${q.q}</label>
             <input type="text" id="q-${q.id}" name="${q.id}" required placeholder="Ваша відповідь..." autocomplete="off">
         `;
+        container.appendChild(group);
+    }
+
+    function renderChoiceQuestion(q) {
+        const group = document.createElement("div");
+        group.className = "form-group";
+
+        const label = document.createElement("label");
+        label.textContent = q.q;
+        group.appendChild(label);
+
+        const grid = document.createElement("div");
+        grid.className = "emoji-grid";
+
+        q.choices.forEach((choice) => {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "emoji-btn";
+            btn.textContent = choice;
+            btn.addEventListener("click", () => {
+                grid.querySelectorAll(".emoji-btn").forEach(b => b.classList.remove("selected"));
+                btn.classList.add("selected");
+                emojiSelections[q.id] = choice;
+            });
+            grid.appendChild(btn);
+        });
+
+        group.appendChild(grid);
         container.appendChild(group);
     }
 

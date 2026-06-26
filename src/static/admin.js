@@ -97,6 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("check-fingerprint").checked = data.check_fingerprint !== false;
                 document.getElementById("check-account-age").checked = data.check_account_age !== false;
                 document.getElementById("min-account-age-months").value = data.min_account_age_months ?? 3;
+                document.getElementById("questions-count").value = data.questions_count ?? 1;
                 document.getElementById("log-channel").value = data.log_channel || "";
                 document.getElementById("contact-link").value = data.contact_link || "";
                 document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
@@ -116,6 +117,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     data.questions.forEach(q => {
                         if (q.type === "emoji") {
                             renderEmojiQuestion(q.q, q.correct, (q.distractors || []).join(", "));
+                        } else if (q.type === "choice") {
+                            renderChoiceQuestion(q.q, (q.a || [])[0] || "", (q.choices || []).join(", "));
                         } else {
                             renderQuestion(q.q, (q.a || []).join(", "));
                         }
@@ -138,6 +141,21 @@ document.addEventListener("DOMContentLoaded", () => {
         questionsList.appendChild(item);
     }
 
+    function renderChoiceQuestion(questionText = "", answersText = "", choicesText = "") {
+        const item = document.createElement("div");
+        item.className = "question-item";
+        item.dataset.type = "choice";
+        item.innerHTML = `
+            <div style="font-size:11px; color:#8f9cae; margin-bottom:6px;">📋 Питання з вибором</div>
+            <input type="text" placeholder="Запитання (наприклад, Чий Крим?)" class="q-text" value="${questionText}" required>
+            <input type="text" placeholder="Правильна відповідь (наприклад, Україна)" class="q-ans" value="${answersText}" required>
+            <input type="text" placeholder="Варіанти вибору через кому (наприклад, Україна, Росія, Нічий, Спірний)" class="q-choices" value="${choicesText}" required>
+            <button type="button" class="btn-secondary remove-btn" style="background:#ff4a4a; padding:6px 12px; font-size:12px;">Видалити</button>
+        `;
+        item.querySelector(".remove-btn").addEventListener("click", () => item.remove());
+        questionsList.appendChild(item);
+    }
+
     function renderEmojiQuestion(questionText = "", correctEmoji = "", distractorsText = "") {
         const item = document.createElement("div");
         item.className = "question-item";
@@ -154,6 +172,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     addQuestionBtn.addEventListener("click", () => renderQuestion());
+    document.getElementById("add-choice-question").addEventListener("click", () => renderChoiceQuestion());
     document.getElementById("add-emoji-question").addEventListener("click", () => renderEmojiQuestion());
 
     form.addEventListener("submit", (e) => {
@@ -168,6 +187,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const distractors = item.querySelector(".q-distractors").value
                     .split(",").map(s => s.trim()).filter(Boolean);
                 if (q && correct) questions.push({ type: "emoji", q, correct, distractors });
+            } else if (item.dataset.type === "choice") {
+                const a = item.querySelector(".q-ans").value.trim();
+                const choices = item.querySelector(".q-choices").value
+                    .split(",").map(s => s.trim()).filter(Boolean);
+                if (q && a && choices.length >= 2) questions.push({ type: "choice", q, a: [a], choices });
             } else {
                 const a = item.querySelector(".q-ans").value.split(",").map(s => s.trim()).filter(Boolean);
                 if (q && a.length > 0) questions.push({ q, a });
@@ -187,6 +211,7 @@ document.addEventListener("DOMContentLoaded", () => {
             check_fingerprint: document.getElementById("check-fingerprint").checked,
             check_account_age: document.getElementById("check-account-age").checked,
             min_account_age_months: parseInt(document.getElementById("min-account-age-months").value, 10),
+            questions_count: parseInt(document.getElementById("questions-count").value, 10),
             log_channel: document.getElementById("log-channel").value.trim(),
             contact_link: document.getElementById("contact-link").value.trim(),
             decline_msg_captcha: document.getElementById("decline-msg-captcha").value.trim(),
