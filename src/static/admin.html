@@ -218,12 +218,24 @@
                     <input type="checkbox" id="check-language">
                 </div>
 
-                <div class="form-group">
-                    <div>
-                        <label for="log-ru-language">⚠️ Логувати RU</label>
-                        <div class="desc">Логувати в канал користувачів з російською мовою інтерфейсу</div>
+                <div style="margin-bottom:15px;">
+                    <label style="font-size:14px; display:block; margin-bottom:6px;">⚠️ Логувати мови (оберіть які)</label>
+                    <div class="desc" style="margin-bottom:8px;">Користувачі з обраними мовами будуть логуватися в канал</div>
+                    <div id="language-checkboxes" style="display:flex; flex-wrap:wrap; gap:8px;">
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="ru"> 🇷🇺 RU</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="be"> 🇧🇾 BE</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="tr"> 🇹🇷 TR</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="zh"> 🇨🇳 ZH</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="ar"> 🇸🇦 AR</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="fa"> 🇮🇷 FA</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="hi"> 🇮🇳 HI</label>
+                        <label style="font-size:13px; display:flex; align-items:center; gap:4px; cursor:pointer; background:rgba(255,255,255,0.03); padding:4px 8px; border-radius:6px;"><input type="checkbox" class="lang-cb" value="vi"> 🇻🇳 VI</label>
                     </div>
-                    <input type="checkbox" id="log-ru-language">
+                    <div style="margin-top:8px; display:flex; gap:8px;">
+                        <input type="text" id="custom-lang-input" placeholder="➕ Кастомна мова (напр. es, fr, de...)" style="flex:1;">
+                        <button type="button" id="add-custom-lang-btn" style="background:rgba(255,255,255,0.1); padding:8px 12px; font-size:13px;">Додати</button>
+                    </div>
+                    <div id="custom-lang-tags" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;"></div>
                 </div>
 
                 <div class="form-group">

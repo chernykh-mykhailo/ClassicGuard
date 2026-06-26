@@ -59,7 +59,7 @@ class SettingsModel(BaseModel):
     check_avatar: bool
     check_premium: bool = True
     check_language: bool = True
-    log_ru_language: bool = False
+    log_languages: List[str] = []
     check_fingerprint: bool = True
     check_account_age: bool = True
     min_account_age_months: int = 3
@@ -456,8 +456,9 @@ async def verify_user(request: Request):
     if log_chan and settings.get("check_language", True):
         if lang_code and lang_code not in ["uk", "ru", "be", "en"]:
             bot_api.send_message(log_chan, f"ℹ️ <b>Підозріла мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code}.")
-        if lang_code == "ru" and settings.get("log_ru_language", False):
-            bot_api.send_message(log_chan, f"⚠️ <b>Мова РФ</b>: (ID: <code>{user_id}</code>). Користувач з російською мовою інтерфейсу.")
+        log_langs = settings.get("log_languages", [])
+        if lang_code and lang_code in log_langs:
+            bot_api.send_message(log_chan, f"⚠️ <b>Цільова мова</b>: (ID: <code>{user_id}</code>). Мова інтерфейсу: {lang_code} (в списку відстеження).")
 
     # 6. Check Account Age (estimated from Telegram ID)
     if settings.get("check_account_age", True):

@@ -10,6 +10,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const selectorContainer = document.getElementById("chat-selector-container");
     const chatSelect = document.getElementById("chat-select");
     const selectChatBtn = document.getElementById("select-chat-btn");
+    const customLangContainer = document.getElementById("custom-lang-tags");
+    const customLangInput = document.getElementById("custom-lang-input");
+    const addCustomLangBtn = document.getElementById("add-custom-lang-btn");
+    let customLanguages = [];
 
     let activeChatId = chatId;
 
@@ -52,6 +56,32 @@ document.addEventListener("DOMContentLoaded", () => {
         loadSettings(activeChatId);
     }
 
+    function renderCustomLangTag(lang) {
+        const tag = document.createElement("span");
+        tag.style.cssText = "background:rgba(0,136,204,0.2); border:1px solid var(--accent-color); border-radius:4px; padding:2px 8px; font-size:12px; display:flex; align-items:center; gap:4px;";
+        tag.innerHTML = `${lang.toUpperCase()} <button type="button" style="background:none; border:none; color:#ff4a4a; cursor:pointer; padding:0; font-size:14px; line-height:1;">&times;</button>`;
+        tag.querySelector("button").addEventListener("click", () => {
+            customLanguages = customLanguages.filter(l => l !== lang);
+            tag.remove();
+        });
+        customLangContainer.appendChild(tag);
+    }
+
+    addCustomLangBtn.addEventListener("click", () => {
+        const val = customLangInput.value.trim().toLowerCase();
+        if (val && !customLanguages.includes(val) && !document.querySelector(`.lang-cb[value="${val}"]`)) {
+            customLanguages.push(val);
+            renderCustomLangTag(val);
+            customLangInput.value = "";
+        }
+    });
+
+    function getLogLanguages() {
+        const checked = [];
+        document.querySelectorAll(".lang-cb:checked").forEach(cb => checked.push(cb.value));
+        return [...checked, ...customLanguages];
+    }
+
     function loadSettings(cid) {
         fetch(`/api/settings?chat_id=${cid}`)
             .then(res => res.json())
@@ -64,7 +94,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("avatar-min-count").value = data.avatar_min_count ?? 1;
                 document.getElementById("check-premium").checked = data.check_premium !== false;
                 document.getElementById("check-language").checked = data.check_language !== false;
-                document.getElementById("log-ru-language").checked = data.log_ru_language === true;
                 document.getElementById("check-fingerprint").checked = data.check_fingerprint !== false;
                 document.getElementById("check-account-age").checked = data.check_account_age !== false;
                 document.getElementById("min-account-age-months").value = data.min_account_age_months ?? 3;
@@ -72,6 +101,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.getElementById("contact-link").value = data.contact_link || "";
                 document.getElementById("decline-msg-captcha").value = data.decline_msg_captcha || "";
                 document.getElementById("decline-msg-twink").value = data.decline_msg_twink || "";
+
+                // Load language checkboxes
+                const logLangs = data.log_languages || [];
+                document.querySelectorAll(".lang-cb").forEach(cb => {
+                    cb.checked = logLangs.includes(cb.value);
+                });
+                customLanguages = logLangs.filter(l => !document.querySelector(`.lang-cb[value="${l}"]`));
+                customLangContainer.innerHTML = "";
+                customLanguages.forEach(l => renderCustomLangTag(l));
 
                 questionsList.innerHTML = "";
                 if (data.questions) {
@@ -145,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
             avatar_min_count: parseInt(document.getElementById("avatar-min-count").value, 10),
             check_premium: document.getElementById("check-premium").checked,
             check_language: document.getElementById("check-language").checked,
-            log_ru_language: document.getElementById("log-ru-language").checked,
+            log_languages: getLogLanguages(),
             check_fingerprint: document.getElementById("check-fingerprint").checked,
             check_account_age: document.getElementById("check-account-age").checked,
             min_account_age_months: parseInt(document.getElementById("min-account-age-months").value, 10),

@@ -16,7 +16,7 @@ DEFAULT_SETTINGS = {
     "check_avatar": True,
     "check_premium": True,
     "check_language": True,
-    "log_ru_language": False,
+    "log_languages": [],
     "check_fingerprint": True,
     "check_account_age": True,
     "min_account_age_months": 3,
