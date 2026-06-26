@@ -1,6 +1,8 @@
 import sqlite3
 import json
 import os
+from datetime import datetime, timedelta
+
 
 DB_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "guard.db")
 
@@ -181,8 +183,8 @@ def get_chat_weight(chat_id: int) -> float:
 def check_quick_bans(user_id: int, time_window_hours: int = 1) -> dict:
     """Check if user has multiple bans in short time window (rate limiting)"""
     with get_db() as conn:
-        from datetime import datetime, timedelta
         cutoff = (datetime.now() - timedelta(hours=time_window_hours)).isoformat()
+
         
         # Count recent bans from different chats
         recent_bans = conn.execute("""
